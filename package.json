@@ -4,7 +4,7 @@
 	"description": "Lightweight express like web framework",
 	"main": "http.js",
 	"types": "http.d.ts",
-	"repository": "https://github.com/MihkelBaranov/soupe-http",
+	"repository": "https://github.com/MihkelBaranov/liquid-http",
 	"author": "Mihkel Baranov",
 	"license": "MIT",
 	"scripts": {
