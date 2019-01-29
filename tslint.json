@@ -1,0 +1,36 @@
+{
+	"extends": [
+		"tslint:recommended",
+	],
+	"rules": {
+		"no-unused-expression": true,
+		"no-duplicate-variable": true,
+		"curly": true,
+		"class-name": true,
+		"semicolon": true,
+		"triple-equals": true,
+		"max-classes-per-file": true,
+		"no-console": [
+			true,
+			"log",
+			"error"
+		],
+		"indent": [
+			true,
+			"tabs",
+			4
+		],
+		"quotemark": [
+			true,
+			"double"
+		],
+		"whitespace": [
+			true,
+			"check-branch",
+			"check-decl",
+			"check-operator",
+			"check-separator",
+			"check-type"
+		]
+	}
+}
