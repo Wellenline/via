@@ -205,7 +205,7 @@ export const HttpCode = (code: HttpStatus) => (target: object, propertyKey: stri
  * @param method HttpMethodsEnum
  * @param path Route path
  */
-export const Route = (method: HttpMethodsEnum, path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => {
+export const Route = (method: HttpMethodsEnum, path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => {
 	const meta = Reflect.getMetadata(Constants.ROUTE_DATA, target) || [];
 	meta.push({ method, path, name, descriptor });
 	Reflect.defineMetadata(Constants.ROUTE_DATA, meta, target);
