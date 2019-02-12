@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { IncomingMessage, Server, ServerResponse, OutgoingHttpHeaders } from "http";
 import "reflect-metadata";
 export declare enum HttpStatus {
@@ -142,47 +141,47 @@ export declare const HttpCode: (code: HttpStatus) => (target: object, propertyKe
  * @param method HttpMethodsEnum
  * @param path Route path
  */
-export declare const Route: (method: HttpMethodsEnum, path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Route: (method: HttpMethodsEnum, path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Get: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Get: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Post: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Post: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Put: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Put: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Patch: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Patch: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Delete: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Delete: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Mixed: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Mixed: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Head: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Head: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Options: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<Function>) => void;
+export declare const Options: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
 /**
  * Get request parameters
  * @param key optional key to lookup
