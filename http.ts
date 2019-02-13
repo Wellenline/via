@@ -299,14 +299,14 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 	req.route = getRoute(req);
 	req.params = decodeValues(req.params);
 	req.query = decodeValues(req.parsed.query);
-
 	try {
-		if (!req.route) {
-			throw httpExecption(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
-		}
 
 		if (app.middleware.length > 0) {
 			await execute(app.middleware, req, res);
+		}
+
+		if (!req.route) {
+			throw httpExecption(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
 		}
 
 		if (req.route.middleware && app.next) {

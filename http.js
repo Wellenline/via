@@ -230,11 +230,11 @@ const onRequest = async (req, res) => {
     req.params = decodeValues(req.params);
     req.query = decodeValues(req.parsed.query);
     try {
-        if (!req.route) {
-            throw exports.httpExecption(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
-        }
         if (exports.app.middleware.length > 0) {
             await execute(exports.app.middleware, req, res);
+        }
+        if (!req.route) {
+            throw exports.httpExecption(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
         }
         if (req.route.middleware && exports.app.next) {
             await execute(req.route.middleware, req, res);
