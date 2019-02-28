@@ -45,10 +45,10 @@ test("multiple", (t) => {
 });
 
 test("laf:json", async (t) => {
-	@Resource()
+	@Resource("/json")
 	class Test {
 
-		@Get("/json")
+		@Get("/")
 		public json(@Req() req: IRequest, @Param("number") numb: number) {
 			return {
 				code: 200,

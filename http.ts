@@ -379,6 +379,7 @@ const execute = async (list: Function[], req: IRequest, res: IResponse) => {
 	}));
 }
 
+
 /**
  * Find route and match params
  * @param req Request
@@ -391,6 +392,8 @@ const getRoute = (req: IRequest) => {
 
 		const keys = [];
 		const regex = /:([^\/\?]+)\??/g;
+		route.path = route.path.endsWith("/") ? route.path.slice(0, -1) : route.path;
+
 		let params = regex.exec(route.path);
 		while (params != null) {
 			keys.push(params[1]);

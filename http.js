@@ -309,6 +309,7 @@ const getRoute = (req) => {
         const base = match[1] || match[2] || match[3];
         const keys = [];
         const regex = /:([^\/\?]+)\??/g;
+        route.path = route.path.endsWith("/") ? route.path.slice(0, -1) : route.path;
         let params = regex.exec(route.path);
         while (params != null) {
             keys.push(params[1]);
