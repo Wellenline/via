@@ -1,6 +1,6 @@
 {
 	"extends": [
-		"tslint:recommended",
+		"tslint:recommended"
 	],
 	"rules": {
 		"no-unused-expression": true,
@@ -10,11 +10,9 @@
 		"semicolon": true,
 		"triple-equals": true,
 		"max-classes-per-file": true,
-		"no-console": [
-			true,
-			"log",
-			"error"
-		],
+		"max-line-length": false,
+		"variable-name": false,
+		"no-console": false,
 		"indent": [
 			true,
 			"tabs",

@@ -1,4 +1,4 @@
-import { IncomingMessage, Server, ServerResponse, OutgoingHttpHeaders } from "http";
+import { IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
 import "reflect-metadata";
 export declare enum HttpStatus {
     CONTINUE = 100,
@@ -46,8 +46,7 @@ export declare enum HttpStatus {
     GATEWAY_TIMEOUT = 504,
     HTTP_VERSION_NOT_SUPPORTED = 505
 }
-export interface IResponse extends ServerResponse {
-}
+export declare type IResponse = ServerResponse;
 export interface IApp {
     server?: Server;
     routes: IRoute[];
@@ -58,15 +57,15 @@ export interface IApp {
 export interface IParam {
     index?: number;
     name?: string;
-    fn: Function;
+    fn: (req?: IRequest) => void;
 }
 export interface IRoute {
     method: number;
     path: string;
     name: string;
-    middleware: Function[];
+    middleware: any[];
     params: IParam[];
-    fn: Function;
+    fn: any;
     responseHttpCode: HttpStatus;
     responseHttpHeaders: OutgoingHttpHeaders;
 }
@@ -84,12 +83,15 @@ export interface IRequest extends IncomingMessage {
 }
 export interface IOptions {
     port: number | string;
-    middleware?: Function[];
+    middleware?: any[];
     autoload?: string;
 }
-export interface INext {
-    (data?: object): void;
+export interface IException {
+    message?: string;
+    error?: any;
+    statusCode?: number;
 }
+export declare type INext = (data?: object) => void;
 export declare enum HttpMethodsEnum {
     GET = 0,
     POST = 1,
@@ -115,17 +117,17 @@ export declare const bootstrap: (options: IOptions) => void;
  * Resource decorator
  * @param path route path
  */
-export declare const Resource: (path?: string) => (target: Function) => void;
-export declare const httpExecption: (message: string, statusCode: HttpStatus, error?: string | object) => {
-    statusCode: HttpStatus;
+export declare const Resource: (path?: string) => (target: any) => void;
+export declare const httpException: (message: string, statusCode: HttpStatus, error?: string | object) => {
     error: string | object;
     message: string;
+    statusCode: HttpStatus;
 };
 /**
  * Route/Resource middleware
  * @param middleware
  */
-export declare const Use: (...middleware: Function[]) => (target: object, propertyKey: string) => void;
+export declare const Use: (...middleware: any[]) => (target: object, propertyKey: string) => void;
 /**
  * Set custom response headers, defaults to application/json
  * @param headers OutgoingHttpHeaders

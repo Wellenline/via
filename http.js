@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const fs = require("fs");
 const http_1 = require("http");
 require("reflect-metadata");
 const url_1 = require("url");
-const fs = require("fs");
 var HttpStatus;
 (function (HttpStatus) {
     HttpStatus[HttpStatus["CONTINUE"] = 100] = "CONTINUE";
@@ -73,12 +73,12 @@ var Constants;
     Constants["ROUTE_CODE"] = "__route_code__";
 })(Constants = exports.Constants || (exports.Constants = {}));
 exports.app = {
-    routes: [],
-    next: false,
-    middleware: [],
     headers: {
         "Content-type": "application/json",
-    }
+    },
+    middleware: [],
+    next: false,
+    routes: [],
 };
 exports.bootstrap = (options) => {
     if (options.middleware) {
@@ -106,23 +106,23 @@ exports.Resource = (path = "") => (target) => {
         const responseHttpCode = Reflect.getMetadata(Constants.ROUTE_CODE + route.name, target.prototype) || HttpStatus.OK;
         const responseHttpHeaders = Reflect.getMetadata(Constants.ROUTE_HEADERS + route.name, target.prototype) || exports.app.headers;
         return {
+            fn: route.descriptor.value,
             method: route.method,
             middleware: [...resourceMiddleware, ...middleware],
             name: route.name,
             params,
             path: path + route.path,
-            fn: route.descriptor.value,
             responseHttpCode,
-            responseHttpHeaders
+            responseHttpHeaders,
         };
     }));
     Reflect.defineMetadata(Constants.ROUTE_DATA, exports.app.routes, target);
 };
-exports.httpExecption = (message, statusCode, error) => {
+exports.httpException = (message, statusCode, error) => {
     return {
-        statusCode,
         error,
-        message
+        message,
+        statusCode,
     };
 };
 // Decorators
@@ -234,7 +234,7 @@ const onRequest = async (req, res) => {
             await execute(exports.app.middleware, req, res);
         }
         if (!req.route) {
-            throw exports.httpExecption(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
+            throw exports.httpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
         }
         if (req.route.middleware && exports.app.next) {
             await execute(req.route.middleware, req, res);
@@ -249,7 +249,7 @@ const onRequest = async (req, res) => {
         }
         else {
             if (!res.finished) {
-                throw exports.httpExecption(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
+                throw exports.httpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
             }
         }
     }
@@ -261,12 +261,17 @@ const onRequest = async (req, res) => {
         res.end();
     }
 };
+const handleException = (res, e) => {
+    res.writeHead(e.statusCode || HttpStatus.INTERNAL_SERVER_ERROR, exports.app.headers);
+    res.write(JSON.stringify(e));
+    res.end();
+};
 /**
  * Get decorated arguments
  * @param req Request
  */
 const args = (req) => {
-    const args = [];
+    const pArgs = [];
     if (req.route.params) {
         req.route.params.sort((a, b) => a.index - b.index);
         for (const param of req.route.params) {
@@ -274,14 +279,14 @@ const args = (req) => {
             if (param !== undefined) {
                 result = param.fn(req);
             }
-            args.push(result);
+            pArgs.push(result);
         }
     }
-    return args;
+    return pArgs;
 };
 /**
  * Run middleware
- * @param middleware
+ * @param list
  * @param req
  * @param res
  */
@@ -289,7 +294,7 @@ const execute = async (list, req, res) => {
     return await Promise.all(list.map(async (fn) => {
         exports.app.next = false;
         if (fn instanceof Function) {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 fn(req, res, (data) => {
                     exports.app.next = true;
                     req.next = data || {};
@@ -305,13 +310,13 @@ const execute = async (list, req, res) => {
  */
 const getRoute = (req) => {
     return exports.app.routes.find((route) => {
-        const match = /^(.*)\?.*#.*|(.*)(?=\?|#)|(.*[^\?#])$/.exec(req.url);
+        const match = /^(.*)\?.*#.*|(.*)(?=[?#])|(.*[^?#])$/.exec(req.url);
         const base = match[1] || match[2] || match[3];
         const keys = [];
-        const regex = /:([^\/\?]+)\??/g;
+        const regex = /:([^\/?]+)\??/g;
         route.path = route.path.endsWith("/") ? route.path.slice(0, -1) : route.path;
         let params = regex.exec(route.path);
-        while (params != null) {
+        while (params !== null) {
             keys.push(params[1]);
             params = regex.exec(route.path);
         }
@@ -347,8 +352,10 @@ const decorate = (fn) => {
  */
 const decodeValues = (object) => {
     const decoded = {};
-    for (let key in object) {
-        decoded[key] = !isNaN(parseFloat(object[key])) && isFinite(object[key]) ? (Number.isInteger(object[key]) ? Number.parseInt(object[key], 10) : Number.parseFloat(object[key])) : object[key];
+    for (const key of Object.keys(object)) {
+        decoded[key] = !isNaN(parseFloat(object[key])) && isFinite(object[key]) ?
+            (Number.isInteger(object[key]) ? Number.parseInt(object[key], 10) :
+                Number.parseFloat(object[key])) : object[key];
     }
     return decoded;
 };

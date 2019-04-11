@@ -1,7 +1,7 @@
-import { createServer, IncomingMessage, Server, ServerResponse, OutgoingHttpHeaders } from "http";
+import * as fs from "fs";
+import { createServer, IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
 import "reflect-metadata";
 import { parse } from "url";
-import * as fs from "fs";
 
 export enum HttpStatus {
 	CONTINUE = 100,
@@ -49,27 +49,27 @@ export enum HttpStatus {
 	GATEWAY_TIMEOUT = 504,
 	HTTP_VERSION_NOT_SUPPORTED = 505,
 }
-export interface IResponse extends ServerResponse { }
+export type IResponse = ServerResponse;
 
 export interface IApp {
 	server?: Server;
 	routes: IRoute[];
-	next: boolean,
+	next: boolean;
 	middleware: any[];
 	headers: OutgoingHttpHeaders;
 }
 export interface IParam {
 	index?: number;
 	name?: string;
-	fn: Function
+	fn: (req?: IRequest) => void;
 }
 export interface IRoute {
 	method: number;
 	path: string;
 	name: string;
-	middleware: Function[];
+	middleware: any[];
 	params: IParam[];
-	fn: Function;
+	fn: any;
 	responseHttpCode: HttpStatus;
 	responseHttpHeaders: OutgoingHttpHeaders;
 }
@@ -87,12 +87,18 @@ export interface IRequest extends IncomingMessage {
 }
 export interface IOptions {
 	port: number | string;
-	middleware?: Function[];
+	middleware?: any[];
 	autoload?: string;
 }
-export interface INext {
-	(data?: object): void;
+
+export interface IException {
+	message?: string;
+	error?: any;
+	statusCode?: number;
 }
+
+export type INext = (data?: object) => void;
+
 export enum HttpMethodsEnum {
 	GET = 0,
 	POST,
@@ -101,7 +107,7 @@ export enum HttpMethodsEnum {
 	PATCH,
 	MIXED,
 	HEAD,
-	OPTIONS
+	OPTIONS,
 }
 export enum Constants {
 	INVALID_ROUTE = "Invalid route",
@@ -112,14 +118,15 @@ export enum Constants {
 	ROUTE_HEADERS = "__route_headers",
 	ROUTE_CODE = "__route_code__",
 }
+
 export const app: IApp = {
-	routes: [],
-	next: false,
-	middleware: [],
 	headers: {
 		"Content-type": "application/json",
-	}
-}
+	},
+	middleware: [],
+	next: false,
+	routes: [],
+};
 
 export const bootstrap = (options: IOptions) => {
 	if (options.middleware) {
@@ -135,13 +142,13 @@ export const bootstrap = (options: IOptions) => {
 	}
 
 	app.server = createServer(onRequest).listen(options.port);
-}
+};
 
 /**
  * Resource decorator
  * @param path route path
  */
-export const Resource = (path: string = "") => (target: Function) => {
+export const Resource = (path: string = "") => (target: any) => {
 	const resourceMiddleware = Reflect.getMetadata(Constants.ROUTE_MIDDLEWARE, target) || [];
 	const routes = Reflect.getMetadata(Constants.ROUTE_DATA, target.prototype) || [];
 
@@ -152,35 +159,34 @@ export const Resource = (path: string = "") => (target: Function) => {
 		const responseHttpHeaders = Reflect.getMetadata(Constants.ROUTE_HEADERS + route.name, target.prototype) || app.headers;
 
 		return {
+			fn: route.descriptor.value,
 			method: route.method,
 			middleware: [...resourceMiddleware, ...middleware],
 			name: route.name,
 			params,
 			path: path + route.path,
-			fn: route.descriptor.value,
 			responseHttpCode,
-			responseHttpHeaders
+			responseHttpHeaders,
 		};
 	}));
 
 	Reflect.defineMetadata(Constants.ROUTE_DATA, app.routes, target);
 };
 
-
-export const httpExecption = (message: string, statusCode: HttpStatus, error?: object | string) => {
+export const httpException = (message: string, statusCode: HttpStatus, error?: object | string) => {
 	return {
-		statusCode,
 		error,
-		message
-	}
-}
+		message,
+		statusCode,
+	};
+};
 
 // Decorators
 /**
  * Route/Resource middleware
- * @param middleware 
+ * @param middleware
  */
-export const Use = (...middleware: Function[]) => (target: object, propertyKey: string) => {
+export const Use = (...middleware: any[]) => (target: object, propertyKey: string) => {
 	Reflect.defineMetadata(Constants.ROUTE_MIDDLEWARE + (propertyKey ? propertyKey : ""), middleware, target);
 };
 
@@ -198,18 +204,19 @@ export const HttpHeaders = (headers: OutgoingHttpHeaders) => (target: object, pr
  */
 export const HttpCode = (code: HttpStatus) => (target: object, propertyKey: string) => {
 	Reflect.defineMetadata(Constants.ROUTE_CODE + (propertyKey ? propertyKey : ""), code, target);
-}
+};
 
 /**
  * @Route Decorator
  * @param method HttpMethodsEnum
  * @param path Route path
  */
-export const Route = (method: HttpMethodsEnum, path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => {
-	const meta = Reflect.getMetadata(Constants.ROUTE_DATA, target) || [];
-	meta.push({ method, path, name, descriptor });
-	Reflect.defineMetadata(Constants.ROUTE_DATA, meta, target);
-};
+export const Route = (method: HttpMethodsEnum, path: string) =>
+	(target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => {
+		const meta = Reflect.getMetadata(Constants.ROUTE_DATA, target) || [];
+		meta.push({ method, path, name, descriptor });
+		Reflect.defineMetadata(Constants.ROUTE_DATA, meta, target);
+	};
 
 /**
  * @Get Decorator
@@ -287,7 +294,6 @@ export const Res = () => decorate((req: IRequest) => req.response);
  */
 export const Req = () => decorate((req: IRequest) => req.request);
 
-
 const onRequest = async (req: IRequest, res: IResponse) => {
 	req.params = {};
 	req.parsed = parse(req.url, true);
@@ -306,7 +312,7 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 		}
 
 		if (!req.route) {
-			throw httpExecption(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
+			throw httpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
 		}
 
 		if (req.route.middleware && app.next) {
@@ -326,7 +332,7 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 
 		} else {
 			if (!res.finished) {
-				throw httpExecption(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
+				throw httpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
 			}
 		}
 
@@ -336,15 +342,20 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 	} finally {
 		res.end();
 	}
+};
 
-}
+const handleException = (res: IResponse, e: IException) => {
+	res.writeHead(e.statusCode || HttpStatus.INTERNAL_SERVER_ERROR, app.headers);
+	res.write(JSON.stringify(e));
+	res.end();
+};
 
 /**
  * Get decorated arguments
  * @param req Request
  */
 const args = (req: IRequest) => {
-	const args = [];
+	const pArgs = [];
 	if (req.route.params) {
 		req.route.params.sort((a, b) => a.index - b.index);
 		for (const param of req.route.params) {
@@ -352,23 +363,23 @@ const args = (req: IRequest) => {
 			if (param !== undefined) {
 				result = param.fn(req);
 			}
-			args.push(result);
+			pArgs.push(result);
 		}
 	}
-	return args;
-}
+	return pArgs;
+};
 
 /**
  * Run middleware
- * @param middleware 
- * @param req 
- * @param res 
+ * @param list
+ * @param req
+ * @param res
  */
-const execute = async (list: Function[], req: IRequest, res: IResponse) => {
+const execute = async (list: any[], req: IRequest, res: IResponse) => {
 	return await Promise.all(list.map(async (fn) => {
 		app.next = false;
 		if (fn instanceof Function) {
-			return new Promise((resolve, reject) => {
+			return new Promise((resolve) => {
 				fn(req, res, (data?: string | number | object | string[]) => {
 					app.next = true;
 					req.next = data || {};
@@ -377,8 +388,7 @@ const execute = async (list: Function[], req: IRequest, res: IResponse) => {
 			});
 		}
 	}));
-}
-
+};
 
 /**
  * Find route and match params
@@ -386,16 +396,16 @@ const execute = async (list: Function[], req: IRequest, res: IResponse) => {
  */
 const getRoute = (req: IRequest) => {
 	return app.routes.find((route) => {
-		const match = /^(.*)\?.*#.*|(.*)(?=\?|#)|(.*[^\?#])$/.exec(req.url);
+		const match = /^(.*)\?.*#.*|(.*)(?=[?#])|(.*[^?#])$/.exec(req.url);
 
 		const base = match[1] || match[2] || match[3];
 
 		const keys = [];
-		const regex = /:([^\/\?]+)\??/g;
+		const regex = /:([^\/?]+)\??/g;
 		route.path = route.path.endsWith("/") ? route.path.slice(0, -1) : route.path;
 
 		let params = regex.exec(route.path);
-		while (params != null) {
+		while (params !== null) {
 			keys.push(params[1]);
 			params = regex.exec(route.path);
 		}
@@ -416,20 +426,20 @@ const getRoute = (req: IRequest) => {
 
 			return true;
 		}
-	})
-}
+	});
+};
 
 /**
- * Decorate 
- * @param fn 
+ * Decorate
+ * @param fn
  */
-const decorate = (fn: Function) => {
+const decorate = (fn: any) => {
 	return (target: object, name: string, index: number) => {
 		const meta = Reflect.getMetadata(Constants.ROUTE_PARAMS + name, target) || [];
 		meta.push({ index, name, fn });
 		Reflect.defineMetadata(Constants.ROUTE_PARAMS + name, meta, target);
 	};
-}
+};
 
 /**
  * Decode values
@@ -437,9 +447,10 @@ const decorate = (fn: Function) => {
  */
 const decodeValues = (object: any) => {
 	const decoded: any = {};
-	for (let key in object) {
-		decoded[key] = !isNaN(parseFloat(object[key])) && isFinite(object[key]) ? (Number.isInteger(object[key]) ? Number.parseInt(object[key], 10) : Number.parseFloat(object[key])) : object[key]
+	for (const key of Object.keys(object)) {
+		decoded[key] = !isNaN(parseFloat(object[key])) && isFinite(object[key]) ?
+			(Number.isInteger(object[key]) ? Number.parseInt(object[key], 10) :
+				Number.parseFloat(object[key])) : object[key];
 	}
 	return decoded;
-}
-
+};

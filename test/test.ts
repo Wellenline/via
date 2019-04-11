@@ -1,6 +1,6 @@
 import test from "ava";
 import * as supertest from "supertest";
-import { app, Resource, Get, HttpMethodsEnum, IRequest, IResponse, IRoute, Param, Post, Req, Use, Query, Body, INext, bootstrap, HttpHeaders } from "../http";
+import { app, Body, bootstrap, Get, HttpHeaders, HttpMethodsEnum, INext, IRequest, IResponse, IRoute, Param, Post, Query, Req, Resource, Use } from "../http";
 
 test("get request", (t) => {
 	@Resource()
@@ -60,7 +60,7 @@ test("laf:json", async (t) => {
 	}
 	t.plan(2);
 	bootstrap({
-		port: 3000
+		port: 3000,
 	});
 	const res: any = await supertest(app.server).get("/json").expect(200).expect("Content-Type", /json/);
 
@@ -79,8 +79,8 @@ test("laf:query", async (t) => {
 				code: 200,
 				message: {
 					hello,
-					world,
 					query,
+					world,
 				},
 			};
 		}
@@ -89,7 +89,7 @@ test("laf:query", async (t) => {
 
 	if (!app.server) {
 		bootstrap({
-			port: 3000
+			port: 3000,
 		});
 	}
 
@@ -131,13 +131,12 @@ test("laf:param", async (t) => {
 
 });
 
-
 test("laf:body", async (t) => {
 	@Resource()
 	class BodyTest {
 
 		@Post("/bodytest")
-		@Use((req: IRequest, res: IResponse, next: INext) => {
+		@Use((req: IRequest, next: INext) => {
 			let body = "";
 			req.on("data", (chunk) => {
 				body += chunk.toString();
@@ -152,8 +151,8 @@ test("laf:body", async (t) => {
 			return {
 				code: 200,
 				message: {
-					hello,
 					body,
+					hello,
 				},
 			};
 		}
@@ -172,10 +171,10 @@ test("laf:body", async (t) => {
 
 });
 
-
 test("laf:html-with-middleware/param", async (t) => {
-	const getNumber = (req: IRequest, res: IResponse, next: INext) => {
+	const getNumber = (req: IRequest, next: INext) => {
 		req.params.number = parseInt(req.params.number, 0);
+
 		t.is(req.params.number, 10);
 		next({
 			hello: 5,
