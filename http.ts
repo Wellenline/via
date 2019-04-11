@@ -294,25 +294,30 @@ export const Res = () => decorate((req: IRequest) => req.response);
  */
 export const Req = () => decorate((req: IRequest) => req.request);
 
+/**
+ * Request handler
+ * @param req Request
+ * @param res Response
+ */
 const onRequest = async (req: IRequest, res: IResponse) => {
-	req.params = {};
-	req.parsed = parse(req.url, true);
-
-	req.response = res;
-	req.request = req;
-
-	app.next = true;
-	req.route = getRoute(req);
-	req.params = decodeValues(req.params);
-	req.query = decodeValues(req.parsed.query);
 	try {
+		req.params = {};
+		req.parsed = parse(req.url, true);
+
+		req.response = res;
+		req.request = req;
+
+		app.next = true;
+		req.route = getRoute(req);
+		req.params = decodeValues(req.params);
+		req.query = decodeValues(req.parsed.query);
 
 		if (app.middleware.length > 0) {
 			await execute(app.middleware, req, res);
 		}
 
 		if (!req.route) {
-			throw httpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
+			return handleException(res, httpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND));
 		}
 
 		if (req.route.middleware && app.next) {
@@ -329,21 +334,20 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 
 			res.writeHead(req.route.responseHttpCode, req.route.responseHttpHeaders);
 			Buffer.isBuffer(response) || typeof response !== "object" ? res.write(response) : res.write(JSON.stringify(response));
-
-		} else {
-			if (!res.finished) {
-				throw httpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
-			}
+			res.end();
+		} else if (!res.finished) {
+			return handleException(res, httpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST));
 		}
 
 	} catch (e) {
-		res.writeHead(e.statusCode || HttpStatus.INTERNAL_SERVER_ERROR, app.headers);
-		res.write(JSON.stringify(e));
-	} finally {
-		res.end();
+		handleException(res, e);
 	}
 };
-
+/**
+ * Handle Exceptions
+ * @param res Request
+ * @param e Exception
+ */
 const handleException = (res: IResponse, e: IException) => {
 	res.writeHead(e.statusCode || HttpStatus.INTERNAL_SERVER_ERROR, app.headers);
 	res.write(JSON.stringify(e));

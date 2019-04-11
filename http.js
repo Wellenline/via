@@ -220,21 +220,26 @@ exports.Res = () => decorate((req) => req.response);
  * Request Instance
  */
 exports.Req = () => decorate((req) => req.request);
+/**
+ * Request handler
+ * @param req Request
+ * @param res Response
+ */
 const onRequest = async (req, res) => {
-    req.params = {};
-    req.parsed = url_1.parse(req.url, true);
-    req.response = res;
-    req.request = req;
-    exports.app.next = true;
-    req.route = getRoute(req);
-    req.params = decodeValues(req.params);
-    req.query = decodeValues(req.parsed.query);
     try {
+        req.params = {};
+        req.parsed = url_1.parse(req.url, true);
+        req.response = res;
+        req.request = req;
+        exports.app.next = true;
+        req.route = getRoute(req);
+        req.params = decodeValues(req.params);
+        req.query = decodeValues(req.parsed.query);
         if (exports.app.middleware.length > 0) {
             await execute(exports.app.middleware, req, res);
         }
         if (!req.route) {
-            throw exports.httpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
+            return handleException(res, exports.httpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND));
         }
         if (req.route.middleware && exports.app.next) {
             await execute(req.route.middleware, req, res);
@@ -246,21 +251,21 @@ const onRequest = async (req, res) => {
         if (response) {
             res.writeHead(req.route.responseHttpCode, req.route.responseHttpHeaders);
             Buffer.isBuffer(response) || typeof response !== "object" ? res.write(response) : res.write(JSON.stringify(response));
+            res.end();
         }
-        else {
-            if (!res.finished) {
-                throw exports.httpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
-            }
+        else if (!res.finished) {
+            return handleException(res, exports.httpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST));
         }
     }
     catch (e) {
-        res.writeHead(e.statusCode || HttpStatus.INTERNAL_SERVER_ERROR, exports.app.headers);
-        res.write(JSON.stringify(e));
-    }
-    finally {
-        res.end();
+        handleException(res, e);
     }
 };
+/**
+ * Handle Exceptions
+ * @param res Request
+ * @param e Exception
+ */
 const handleException = (res, e) => {
     res.writeHead(e.statusCode || HttpStatus.INTERNAL_SERVER_ERROR, exports.app.headers);
     res.write(JSON.stringify(e));

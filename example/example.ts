@@ -59,10 +59,10 @@ export class Example {
 	@Use(middleware_1, middleware_2)
 	public async json(@Req() req: IRequest, @Param() params: any, @Query() query: any) {
 		return {
-			query,
-			params,
-			next: req.next,
 			hello: app,
+			next: req.next,
+			params,
+			query,
 		};
 	}
 
@@ -114,11 +114,11 @@ export class Test {
 		"Content-type": "image/png",
 	})
 	public async stream(@Res() res: IResponse) {
-		return fs.readFileSync("./test/logo.png");
+		return fs.readFileSync("../test/logo.png");
 	}
 }
 
 bootstrap({
-	port: 3000,
 	middleware: [body_parser],
+	port: 3000,
 });
