@@ -62,10 +62,10 @@ test("laf:json", async (t) => {
 	bootstrap({
 		port: 3000,
 	});
-	const res: any = await supertest(app.server).get("/json").expect(200).expect("Content-Type", /json/);
+	const response: any = await supertest(app.server).get("/json").expect(200).expect("Content-Type", /json/);
 
-	t.is(res.status, 200);
-	t.is(res.body.message.data, true);
+	t.is(response.status, 200);
+	t.is(response.body.message.data, true);
 
 });
 
@@ -93,13 +93,13 @@ test("laf:query", async (t) => {
 		});
 	}
 
-	const res: any = await supertest(app.server).get("/querytest?hello=world&world=hello").expect(200).expect("Content-Type", /json/);
+	const response: any = await supertest(app.server).get("/querytest?hello=world&world=hello").expect(200).expect("Content-Type", /json/);
 
-	t.is(res.status, 200);
-	t.is(res.body.message.hello, "world");
-	t.is(res.body.message.world, "hello");
-	t.is(res.body.message.query.hello, "world");
-	t.is(res.body.message.query.world, "hello");
+	t.is(response.status, 200);
+	t.is(response.body.message.hello, "world");
+	t.is(response.body.message.world, "hello");
+	t.is(response.body.message.query.hello, "world");
+	t.is(response.body.message.query.world, "hello");
 
 });
 
@@ -123,11 +123,11 @@ test("laf:param", async (t) => {
 		bootstrap({ port: 3000 });
 	}
 
-	const res = await supertest(app.server).get("/paramtest/world").expect(200).expect("Content-Type", /json/);
+	const response = await supertest(app.server).get("/paramtest/world").expect(200).expect("Content-Type", /json/);
 
-	t.is(res.status, 200);
-	t.is(res.body.message.hello, "world");
-	t.is(res.body.message.param.hello, "world");
+	t.is(response.status, 200);
+	t.is(response.body.message.hello, "world");
+	t.is(response.body.message.param.hello, "world");
 
 });
 
@@ -136,7 +136,7 @@ test("laf:body", async (t) => {
 	class BodyTest {
 
 		@Post("/bodytest")
-		@Use((req: IRequest, next: INext) => {
+		@Use((req: IRequest, res: IResponse, next: INext) => {
 			let body = "";
 			req.on("data", (chunk) => {
 				body += chunk.toString();
@@ -163,16 +163,16 @@ test("laf:body", async (t) => {
 		bootstrap({ port: 3000 });
 	}
 
-	const res = await supertest(app.server).post("/bodytest").send({ hello: "world" }).expect(200);
-	t.is(res.status, 200);
-	t.is(res.body.message.hello, "world");
-	t.is(res.body.message.body.hello, "world");
-	t.is(Object.keys(res.body.message.body).length, 1);
+	const response = await supertest(app.server).post("/bodytest").send({ hello: "world" }).expect(200);
+	t.is(response.status, 200);
+	t.is(response.body.message.hello, "world");
+	t.is(response.body.message.body.hello, "world");
+	t.is(Object.keys(response.body.message.body).length, 1);
 
 });
 
 test("laf:html-with-middleware/param", async (t) => {
-	const getNumber = (req: IRequest, next: INext) => {
+	const getNumber = (req: IRequest, res: IResponse, next: INext) => {
 		req.params.number = parseInt(req.params.number, 0);
 
 		t.is(req.params.number, 10);
@@ -207,8 +207,8 @@ test("laf:html-with-middleware/param", async (t) => {
 		bootstrap({ port: 3000 });
 	}
 
-	const res = await supertest(app.server).get("/test/html/10").expect(200).expect("Content-Type", /html/);
+	const response = await supertest(app.server).get("/test/html/10").expect(200).expect("Content-Type", /html/);
 
-	t.is(res.status, 200);
-	t.is(res.text, "<h1>Hello<h1>");
+	t.is(response.status, 200);
+	t.is(response.text, "<h1>Hello<h1>");
 });
