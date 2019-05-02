@@ -1,9 +1,48 @@
 import * as fs from "fs";
 import { parse } from "querystring";
-import { app, Body, bootstrap, Delete, Get, HttpCode, httpException, HttpHeaders, HttpStatus, INext, IRequest, IResponse, Param, Patch, Post, Put, Query, Req, Res, Resource, Use } from "../http";
+import { app, Body, bootstrap, Delete, Get, HttpCode, httpException, HttpHeaders, HttpStatus, INext, IRequest, IResponse, Param, Patch, Post, Put, Query, Req, Res, Resource, Use, HttpException } from "../http";
+
+class Middleware {
+
+	public async one(req: IRequest, res: IResponse, next: any) {
+
+		await new Promise((resolve) => {
+			setTimeout(() => {
+				resolve();
+			}, 2000);
+		});
+
+		req.query.middleware_1 = true;
+		console.log("in middleware 1");
+
+		next(new HttpException("Test", HttpStatus.BAD_REQUEST));
+
+	}
+
+
+	public async two(req: any, res: any, next: any) {
+		req.query.middleware_2 = true;
+		console.log("in middleware 2");
+
+		//setTimeout(() => {
+		// next({ secret: 1 });
+
+		res.writeHead(HttpStatus.BAD_REQUEST, app.headers);
+		res.write(JSON.stringify({
+			message: "Middleware",
+
+			statusCode: HttpStatus.BAD_REQUEST,
+		}));
+		res.end();
+		//}, 5000);
+	}
+}
+
+const shit = new Middleware();
 
 const middleware_1 = (req: any, res: any, next: any) => {
 	req.query.middleware_1 = true;
+	console.log("in middleware 1");
 
 	setTimeout(() => {
 		next({ secret: 1 });
@@ -11,6 +50,7 @@ const middleware_1 = (req: any, res: any, next: any) => {
 };
 
 const middleware_2 = (req: any, res: any, next: any) => {
+	console.log("in middleware 2");
 	req.query.middleware_2 = true;
 
 	next({ ...{ middleware_next: 2 }, ...req.next });
@@ -56,7 +96,7 @@ export class Example {
 
 	@Get("/json/:id?/hello")
 	@HttpCode(HttpStatus.OK)
-	@Use(middleware_1, middleware_2)
+	@Use(shit.one, shit.two)
 	public async json(@Req() req: IRequest, @Param() params: any, @Query() query: any) {
 		return {
 			hello: app,

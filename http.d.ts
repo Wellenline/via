@@ -118,6 +118,9 @@ export declare const bootstrap: (options: IOptions) => void;
  * @param path route path
  */
 export declare const Resource: (path?: string) => (target: any) => void;
+/**
+ * @deprecated Since version 1.0.7. Will be deleted in version 1.1.x. Use new HttpException instead.
+ */
 export declare const httpException: (message: string, statusCode: HttpStatus, error?: string | object) => {
     error: string | object;
     message: string;
@@ -207,3 +210,10 @@ export declare const Res: () => (target: object, name: string, index: number) =>
  * Request Instance
  */
 export declare const Req: () => (target: object, name: string, index: number) => void;
+/**
+ * HttpException error
+ */
+export declare class HttpException extends Error {
+    status: HttpStatus;
+    constructor(message: string, status: HttpStatus);
+}

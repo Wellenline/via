@@ -118,6 +118,9 @@ exports.Resource = (path = "") => (target) => {
     }));
     Reflect.defineMetadata(Constants.ROUTE_DATA, exports.app.routes, target);
 };
+/**
+ * @deprecated Since version 1.0.7. Will be deleted in version 1.1.x. Use new HttpException instead.
+ */
 exports.httpException = (message, statusCode, error) => {
     return {
         error,
@@ -239,7 +242,7 @@ const onRequest = async (req, res) => {
             await execute(exports.app.middleware, req, res);
         }
         if (!req.route) {
-            return handleException(res, exports.httpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND));
+            throw new HttpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
         }
         if (req.route.middleware && exports.app.next) {
             await execute(req.route.middleware, req, res);
@@ -254,11 +257,11 @@ const onRequest = async (req, res) => {
             res.end();
         }
         else if (!res.finished) {
-            return handleException(res, exports.httpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST));
+            throw new HttpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
         }
     }
     catch (e) {
-        handleException(res, e);
+        onException(res, e);
     }
 };
 /**
@@ -266,9 +269,12 @@ const onRequest = async (req, res) => {
  * @param res Request
  * @param e Exception
  */
-const handleException = (res, e) => {
-    res.writeHead(e.statusCode || HttpStatus.INTERNAL_SERVER_ERROR, exports.app.headers);
-    res.write(JSON.stringify(e));
+const onException = (res, e) => {
+    res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, exports.app.headers);
+    res.write(JSON.stringify({
+        message: e.message,
+        statusCode: e.status,
+    }));
     res.end();
 };
 /**
@@ -296,18 +302,21 @@ const args = (req) => {
  * @param res
  */
 const execute = async (list, req, res) => {
-    return await Promise.all(list.map(async (fn) => {
+    for (const fn of list) {
         exports.app.next = false;
         if (fn instanceof Function) {
-            return new Promise((resolve) => {
+            await new Promise((resolve) => {
                 fn(req, res, (data) => {
+                    if (data instanceof HttpException) {
+                        return onException(res, data);
+                    }
                     exports.app.next = true;
                     req.next = data || {};
-                    return resolve();
+                    resolve();
                 });
             });
         }
-    }));
+    }
 };
 /**
  * Find route and match params
@@ -364,3 +373,16 @@ const decodeValues = (object) => {
     }
     return decoded;
 };
+/**
+ * HttpException error
+ */
+class HttpException extends Error {
+    constructor(message, status) {
+        super(message);
+        this.status = status;
+        this.name = this.constructor.name;
+        Error.captureStackTrace(this, this.constructor);
+        this.status = status || 500;
+    }
+}
+exports.HttpException = HttpException;
