@@ -36,8 +36,8 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
-test/test.js
-test/test.d.ts
+test/*.js
+test/*.d.ts
 truck-1.png
 u-a-1.mp3
 .vscode
@@ -45,3 +45,6 @@ app.js
 app.ts
 app.d.ts
 .idea/
+example/keys
+example/*.js
+example/*.d.ts

@@ -69,8 +69,6 @@ var Constants;
     Constants["ROUTE_DATA"] = "__route_data__";
     Constants["ROUTE_MIDDLEWARE"] = "__route_middleware__";
     Constants["ROUTE_PARAMS"] = "__route_params__";
-    Constants["ROUTE_HEADERS"] = "__route_headers";
-    Constants["ROUTE_CODE"] = "__route_code__";
 })(Constants = exports.Constants || (exports.Constants = {}));
 exports.app = {
     headers: {
@@ -92,6 +90,7 @@ exports.bootstrap = (options) => {
         });
     }
     exports.app.server = http_1.createServer(onRequest).listen(options.port);
+    // http2.createSecureServer(options.http2, onRequest).listen(options.port);
 };
 /**
  * Resource decorator
@@ -103,8 +102,6 @@ exports.Resource = (path = "") => (target) => {
     exports.app.routes = exports.app.routes.concat(routes.map((route) => {
         const middleware = Reflect.getMetadata(Constants.ROUTE_MIDDLEWARE + route.name, target.prototype) || [];
         const params = Reflect.getMetadata(Constants.ROUTE_PARAMS + route.name, target.prototype) || [];
-        const responseHttpCode = Reflect.getMetadata(Constants.ROUTE_CODE + route.name, target.prototype) || HttpStatus.OK;
-        const responseHttpHeaders = Reflect.getMetadata(Constants.ROUTE_HEADERS + route.name, target.prototype) || exports.app.headers;
         return {
             fn: route.descriptor.value,
             method: route.method,
@@ -112,21 +109,9 @@ exports.Resource = (path = "") => (target) => {
             name: route.name,
             params,
             path: path + route.path,
-            responseHttpCode,
-            responseHttpHeaders,
         };
     }));
     Reflect.defineMetadata(Constants.ROUTE_DATA, exports.app.routes, target);
-};
-/**
- * @deprecated Since version 1.0.7. Will be deleted in version 1.1.x. Use new HttpException instead.
- */
-exports.httpException = (message, statusCode, error) => {
-    return {
-        error,
-        message,
-        statusCode,
-    };
 };
 // Decorators
 /**
@@ -135,20 +120,6 @@ exports.httpException = (message, statusCode, error) => {
  */
 exports.Use = (...middleware) => (target, propertyKey) => {
     Reflect.defineMetadata(Constants.ROUTE_MIDDLEWARE + (propertyKey ? propertyKey : ""), middleware, target);
-};
-/**
- * Set custom response headers, defaults to application/json
- * @param headers OutgoingHttpHeaders
- */
-exports.HttpHeaders = (headers) => (target, propertyKey) => {
-    Reflect.defineMetadata(Constants.ROUTE_HEADERS + (propertyKey ? propertyKey : ""), headers, target);
-};
-/**
- * Set custom Http Response code, defaults to 200
- * @param code HttpStatus
- */
-exports.HttpCode = (code) => (target, propertyKey) => {
-    Reflect.defineMetadata(Constants.ROUTE_CODE + (propertyKey ? propertyKey : ""), code, target);
 };
 /**
  * @Route Decorator
@@ -216,13 +187,10 @@ exports.Query = (key) => decorate((req) => !key ? req.query : req.query[key]);
  */
 exports.Body = (key) => decorate((req) => !key ? req.body : req.body[key]);
 /**
- * Response instance
+ * Route context
+ * @param key optional key to lookup
  */
-exports.Res = () => decorate((req) => req.response);
-/**
- * Request Instance
- */
-exports.Req = () => decorate((req) => req.request);
+exports.Context = (key) => decorate((req) => !key ? req.context : req.context[key]);
 /**
  * Request handler
  * @param req Request
@@ -232,50 +200,39 @@ const onRequest = async (req, res) => {
     try {
         req.params = {};
         req.parsed = url_1.parse(req.url, true);
-        req.response = res;
-        req.request = req;
         exports.app.next = true;
         req.route = getRoute(req);
         req.params = decodeValues(req.params);
         req.query = decodeValues(req.parsed.query);
+        req.context = {
+            headers: exports.app.headers,
+            req,
+            res,
+            status: HttpStatus.OK,
+        };
         if (exports.app.middleware.length > 0) {
-            await execute(exports.app.middleware, req, res);
+            await execute(exports.app.middleware, req.context);
         }
         if (!req.route) {
             throw new HttpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
         }
         if (req.route.middleware && exports.app.next) {
-            await execute(req.route.middleware, req, res);
+            await execute(req.route.middleware, req.context);
         }
         if (!exports.app.next) {
             return;
         }
-        const response = await req.route.fn(...args(req));
-        if (response) {
-            res.writeHead(req.route.responseHttpCode, req.route.responseHttpHeaders);
-            Buffer.isBuffer(response) || typeof response !== "object" ? res.write(response) : res.write(JSON.stringify(response));
-            res.end();
-        }
-        else if (!res.finished) {
-            throw new HttpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
-        }
+        req.context.res.body = await req.route.fn(...args(req));
+        resolve(req.context);
     }
     catch (e) {
-        onException(res, e);
+        res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, exports.app.headers);
+        res.write(JSON.stringify({
+            message: e.message,
+            statusCode: e.status,
+        }));
+        res.end();
     }
-};
-/**
- * Handle Exceptions
- * @param res Request
- * @param e Exception
- */
-const onException = (res, e) => {
-    res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, exports.app.headers);
-    res.write(JSON.stringify({
-        message: e.message,
-        statusCode: e.status,
-    }));
-    res.end();
 };
 /**
  * Get decorated arguments
@@ -301,20 +258,15 @@ const args = (req) => {
  * @param req
  * @param res
  */
-const execute = async (list, req, res) => {
+const execute = async (list, context) => {
     for (const fn of list) {
         exports.app.next = false;
         if (fn instanceof Function) {
-            await new Promise((resolve) => {
-                fn(req, res, (data) => {
-                    if (data instanceof HttpException) {
-                        return onException(res, data);
-                    }
-                    exports.app.next = true;
-                    req.next = data || {};
-                    resolve();
-                });
-            });
+            const result = await fn(context);
+            if (!result) {
+                break;
+            }
+            exports.app.next = true;
         }
     }
 };
@@ -364,25 +316,59 @@ const decorate = (fn) => {
  * Decode values
  * @param object parameter values
  */
-const decodeValues = (object) => {
+const decodeValues = (obj) => {
     const decoded = {};
-    for (const key of Object.keys(object)) {
-        decoded[key] = !isNaN(parseFloat(object[key])) && isFinite(object[key]) ?
-            (Number.isInteger(object[key]) ? Number.parseInt(object[key], 10) :
-                Number.parseFloat(object[key])) : object[key];
+    for (const key of Object.keys(obj)) {
+        decoded[key] = !isNaN(parseFloat(obj[key])) && isFinite(obj[key]) ?
+            (Number.isInteger(obj[key]) ? Number.parseInt(obj[key], 10) :
+                Number.parseFloat(obj[key])) : obj[key];
     }
     return decoded;
+};
+/**
+ * Check if obj is stream
+ * @param obj any
+ */
+const isStream = (obj) => obj &&
+    typeof obj === "object" &&
+    typeof obj.pipe === "function";
+/**
+ * Check if obj is object
+ * @param obj any
+ */
+const isObject = (obj) => obj &&
+    typeof obj === "object";
+/**
+ * Check if obj is readable
+ * @param obj any
+ */
+const isReadable = (obj) => isStream(obj) &&
+    typeof obj._read === "function" &&
+    typeof obj._readableState === "object";
+/**
+ * Resolve request
+ * @param context request context
+ */
+const resolve = (context) => {
+    context.res.writeHead(context.status, Object.assign(exports.app.headers, context.headers));
+    if (isReadable(context.res.body)) {
+        return context.res.body.pipe(context.res);
+    }
+    if (isObject(context.res.body)) {
+        return context.res.end(JSON.stringify(context.res.body));
+    }
+    context.res.end(context.res.body || "");
 };
 /**
  * HttpException error
  */
 class HttpException extends Error {
-    constructor(message, status) {
+    constructor(message, status = HttpStatus.INTERNAL_SERVER_ERROR) {
         super(message);
         this.status = status;
         this.name = this.constructor.name;
         Error.captureStackTrace(this, this.constructor);
-        this.status = status || 500;
+        this.status = status;
     }
 }
 exports.HttpException = HttpException;

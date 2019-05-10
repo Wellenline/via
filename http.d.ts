@@ -1,4 +1,5 @@
 import { IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
+import * as http2 from "http2";
 import "reflect-metadata";
 export declare enum HttpStatus {
     CONTINUE = 100,
@@ -46,7 +47,9 @@ export declare enum HttpStatus {
     GATEWAY_TIMEOUT = 504,
     HTTP_VERSION_NOT_SUPPORTED = 505
 }
-export declare type IResponse = ServerResponse;
+export interface IResponse extends ServerResponse {
+    body: any;
+}
 export interface IApp {
     server?: Server;
     routes: IRoute[];
@@ -66,8 +69,8 @@ export interface IRoute {
     middleware: any[];
     params: IParam[];
     fn: any;
-    responseHttpCode: HttpStatus;
-    responseHttpHeaders: OutgoingHttpHeaders;
+    httpStatus: HttpStatus;
+    headers: OutgoingHttpHeaders;
 }
 export interface IRequest extends IncomingMessage {
     query: any;
@@ -80,11 +83,20 @@ export interface IRequest extends IncomingMessage {
     route: IRoute;
     response: IResponse;
     request: IRequest;
+    context: any;
 }
 export interface IOptions {
     port: number | string;
     middleware?: any[];
     autoload?: string;
+    http2?: http2.SecureServerOptions;
+}
+export interface IContext {
+    req: IRequest;
+    res: IResponse;
+    headers?: OutgoingHttpHeaders;
+    status?: HttpStatus;
+    [key: string]: any;
 }
 export interface IException {
     message?: string;
@@ -107,9 +119,7 @@ export declare enum Constants {
     NO_RESPONSE = "No response",
     ROUTE_DATA = "__route_data__",
     ROUTE_MIDDLEWARE = "__route_middleware__",
-    ROUTE_PARAMS = "__route_params__",
-    ROUTE_HEADERS = "__route_headers",
-    ROUTE_CODE = "__route_code__"
+    ROUTE_PARAMS = "__route_params__"
 }
 export declare const app: IApp;
 export declare const bootstrap: (options: IOptions) => void;
@@ -119,28 +129,10 @@ export declare const bootstrap: (options: IOptions) => void;
  */
 export declare const Resource: (path?: string) => (target: any) => void;
 /**
- * @deprecated Since version 1.0.7. Will be deleted in version 1.1.x. Use new HttpException instead.
- */
-export declare const httpException: (message: string, statusCode: HttpStatus, error?: string | object) => {
-    error: string | object;
-    message: string;
-    statusCode: HttpStatus;
-};
-/**
  * Route/Resource middleware
  * @param middleware
  */
 export declare const Use: (...middleware: any[]) => (target: object, propertyKey: string) => void;
-/**
- * Set custom response headers, defaults to application/json
- * @param headers OutgoingHttpHeaders
- */
-export declare const HttpHeaders: (headers: OutgoingHttpHeaders) => (target: object, propertyKey: string) => void;
-/**
- * Set custom Http Response code, defaults to 200
- * @param code HttpStatus
- */
-export declare const HttpCode: (code: HttpStatus) => (target: object, propertyKey: string) => void;
 /**
  * @Route Decorator
  * @param method HttpMethodsEnum
@@ -203,17 +195,14 @@ export declare const Query: (key?: string) => (target: object, name: string, ind
  */
 export declare const Body: (key?: string) => (target: object, name: string, index: number) => void;
 /**
- * Response instance
+ * Route context
+ * @param key optional key to lookup
  */
-export declare const Res: () => (target: object, name: string, index: number) => void;
-/**
- * Request Instance
- */
-export declare const Req: () => (target: object, name: string, index: number) => void;
+export declare const Context: (key?: string) => (target: object, name: string, index: number) => void;
 /**
  * HttpException error
  */
 export declare class HttpException extends Error {
     status: HttpStatus;
-    constructor(message: string, status: HttpStatus);
+    constructor(message: string, status?: HttpStatus);
 }

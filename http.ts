@@ -1,5 +1,7 @@
 import * as fs from "fs";
 import { createServer, IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
+
+import * as http2 from "http2";
 import "reflect-metadata";
 import { parse } from "url";
 
@@ -49,7 +51,9 @@ export enum HttpStatus {
 	GATEWAY_TIMEOUT = 504,
 	HTTP_VERSION_NOT_SUPPORTED = 505,
 }
-export type IResponse = ServerResponse;
+export interface IResponse extends ServerResponse {
+	body: any;
+}
 
 export interface IApp {
 	server?: Server;
@@ -70,8 +74,8 @@ export interface IRoute {
 	middleware: any[];
 	params: IParam[];
 	fn: any;
-	responseHttpCode: HttpStatus;
-	responseHttpHeaders: OutgoingHttpHeaders;
+	httpStatus: HttpStatus;
+	headers: OutgoingHttpHeaders;
 }
 export interface IRequest extends IncomingMessage {
 	query: any;
@@ -84,11 +88,21 @@ export interface IRequest extends IncomingMessage {
 	route: IRoute;
 	response: IResponse;
 	request: IRequest;
+	context: any;
 }
 export interface IOptions {
 	port: number | string;
 	middleware?: any[];
 	autoload?: string;
+	http2?: http2.SecureServerOptions;
+}
+
+export interface IContext {
+	req: IRequest;
+	res: IResponse;
+	headers?: OutgoingHttpHeaders;
+	status?: HttpStatus;
+	[key: string]: any;
 }
 
 export interface IException {
@@ -115,8 +129,6 @@ export enum Constants {
 	ROUTE_DATA = "__route_data__",
 	ROUTE_MIDDLEWARE = "__route_middleware__",
 	ROUTE_PARAMS = "__route_params__",
-	ROUTE_HEADERS = "__route_headers",
-	ROUTE_CODE = "__route_code__",
 }
 
 export const app: IApp = {
@@ -142,6 +154,7 @@ export const bootstrap = (options: IOptions) => {
 	}
 
 	app.server = createServer(onRequest).listen(options.port);
+	// http2.createSecureServer(options.http2, onRequest).listen(options.port);
 };
 
 /**
@@ -155,8 +168,6 @@ export const Resource = (path: string = "") => (target: any) => {
 	app.routes = app.routes.concat(routes.map((route: IRoute | any) => {
 		const middleware = Reflect.getMetadata(Constants.ROUTE_MIDDLEWARE + route.name, target.prototype) || [];
 		const params = Reflect.getMetadata(Constants.ROUTE_PARAMS + route.name, target.prototype) || [];
-		const responseHttpCode = Reflect.getMetadata(Constants.ROUTE_CODE + route.name, target.prototype) || HttpStatus.OK;
-		const responseHttpHeaders = Reflect.getMetadata(Constants.ROUTE_HEADERS + route.name, target.prototype) || app.headers;
 
 		return {
 			fn: route.descriptor.value,
@@ -165,23 +176,10 @@ export const Resource = (path: string = "") => (target: any) => {
 			name: route.name,
 			params,
 			path: path + route.path,
-			responseHttpCode,
-			responseHttpHeaders,
 		};
 	}));
 
 	Reflect.defineMetadata(Constants.ROUTE_DATA, app.routes, target);
-};
-
-/**
- * @deprecated Since version 1.0.7. Will be deleted in version 1.1.x. Use new HttpException instead.
- */
-export const httpException = (message: string, statusCode: HttpStatus, error?: object | string) => {
-	return {
-		error,
-		message,
-		statusCode,
-	};
 };
 
 // Decorators
@@ -191,22 +189,6 @@ export const httpException = (message: string, statusCode: HttpStatus, error?: o
  */
 export const Use = (...middleware: any[]) => (target: object, propertyKey: string) => {
 	Reflect.defineMetadata(Constants.ROUTE_MIDDLEWARE + (propertyKey ? propertyKey : ""), middleware, target);
-};
-
-/**
- * Set custom response headers, defaults to application/json
- * @param headers OutgoingHttpHeaders
- */
-export const HttpHeaders = (headers: OutgoingHttpHeaders) => (target: object, propertyKey: string) => {
-	Reflect.defineMetadata(Constants.ROUTE_HEADERS + (propertyKey ? propertyKey : ""), headers, target);
-};
-
-/**
- * Set custom Http Response code, defaults to 200
- * @param code HttpStatus
- */
-export const HttpCode = (code: HttpStatus) => (target: object, propertyKey: string) => {
-	Reflect.defineMetadata(Constants.ROUTE_CODE + (propertyKey ? propertyKey : ""), code, target);
 };
 
 /**
@@ -288,14 +270,10 @@ export const Query = (key?: string) => decorate((req: IRequest) => !key ? req.qu
 export const Body = (key?: string) => decorate((req: IRequest) => !key ? req.body : req.body[key]);
 
 /**
- * Response instance
+ * Route context
+ * @param key optional key to lookup
  */
-export const Res = () => decorate((req: IRequest) => req.response);
-
-/**
- * Request Instance
- */
-export const Req = () => decorate((req: IRequest) => req.request);
+export const Context = (key?: string) => decorate((req: IRequest) => !key ? req.context : req.context[key]);
 
 /**
  * Request handler
@@ -306,17 +284,20 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 	try {
 		req.params = {};
 		req.parsed = parse(req.url, true);
-
-		req.response = res;
-		req.request = req;
-
 		app.next = true;
 		req.route = getRoute(req);
 		req.params = decodeValues(req.params);
 		req.query = decodeValues(req.parsed.query);
 
+		req.context = {
+			headers: app.headers,
+			req,
+			res,
+			status: HttpStatus.OK,
+		};
+
 		if (app.middleware.length > 0) {
-			await execute(app.middleware, req, res);
+			await execute(app.middleware, req.context);
 		}
 
 		if (!req.route) {
@@ -324,40 +305,25 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 		}
 
 		if (req.route.middleware && app.next) {
-			await execute(req.route.middleware, req, res);
+			await execute(req.route.middleware, req.context);
 		}
 
 		if (!app.next) {
 			return;
 		}
 
-		const response = await req.route.fn(...args(req));
+		req.context.res.body = await req.route.fn(...args(req));
 
-		if (response) {
-
-			res.writeHead(req.route.responseHttpCode, req.route.responseHttpHeaders);
-			Buffer.isBuffer(response) || typeof response !== "object" ? res.write(response) : res.write(JSON.stringify(response));
-			res.end();
-		} else if (!res.finished) {
-			throw new HttpException(Constants.NO_RESPONSE, HttpStatus.BAD_REQUEST);
-		}
+		resolve(req.context);
 
 	} catch (e) {
-		onException(res, e);
+		res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, app.headers);
+		res.write(JSON.stringify({
+			message: e.message,
+			statusCode: e.status,
+		}));
+		res.end();
 	}
-};
-/**
- * Handle Exceptions
- * @param res Request
- * @param e Exception
- */
-const onException = (res: IResponse, e: HttpException) => {
-	res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, app.headers);
-	res.write(JSON.stringify({
-		message: e.message,
-		statusCode: e.status,
-	}));
-	res.end();
 };
 
 /**
@@ -385,22 +351,15 @@ const args = (req: IRequest) => {
  * @param req
  * @param res
  */
-const execute = async (list: any[], req: IRequest, res: IResponse) => {
-
+const execute = async (list: any[], context: IContext) => {
 	for (const fn of list) {
 		app.next = false;
 		if (fn instanceof Function) {
-			await new Promise((resolve) => {
-				fn(req, res, (data?: string | number | object | string[] | Error) => {
-					if (data instanceof HttpException) {
-						return onException(res, data);
-					}
-
-					app.next = true;
-					req.next = data || {};
-					resolve();
-				});
-			});
+			const result = await fn(context);
+			if (!result) {
+				break;
+			}
+			app.next = true;
 		}
 	}
 };
@@ -460,24 +419,66 @@ const decorate = (fn: any) => {
  * Decode values
  * @param object parameter values
  */
-const decodeValues = (object: any) => {
+const decodeValues = (obj: any) => {
 	const decoded: any = {};
-	for (const key of Object.keys(object)) {
-		decoded[key] = !isNaN(parseFloat(object[key])) && isFinite(object[key]) ?
-			(Number.isInteger(object[key]) ? Number.parseInt(object[key], 10) :
-				Number.parseFloat(object[key])) : object[key];
+	for (const key of Object.keys(obj)) {
+		decoded[key] = !isNaN(parseFloat(obj[key])) && isFinite(obj[key]) ?
+			(Number.isInteger(obj[key]) ? Number.parseInt(obj[key], 10) :
+				Number.parseFloat(obj[key])) : obj[key];
 	}
 	return decoded;
+};
+/**
+ * Check if obj is stream
+ * @param obj any
+ */
+const isStream = (obj: any) =>
+	obj &&
+	typeof obj === "object" &&
+	typeof obj.pipe === "function";
+/**
+ * Check if obj is object
+ * @param obj any
+ */
+const isObject = (obj: any) =>
+	obj &&
+	typeof obj === "object";
+
+/**
+ * Check if obj is readable
+ * @param obj any
+ */
+const isReadable = (obj: any) =>
+	isStream(obj) &&
+	typeof obj._read === "function" &&
+	typeof obj._readableState === "object";
+
+/**
+ * Resolve request
+ * @param context request context
+ */
+const resolve = (context: IContext) => {
+	context.res.writeHead(context.status, Object.assign(app.headers, context.headers));
+
+	if (isReadable(context.res.body)) {
+		return context.res.body.pipe(context.res);
+	}
+
+	if (isObject(context.res.body)) {
+		return context.res.end(JSON.stringify(context.res.body));
+	}
+
+	context.res.end(context.res.body || "");
 };
 
 /**
  * HttpException error
  */
 export class HttpException extends Error {
-	constructor(message: string, public status: HttpStatus) {
+	constructor(message: string, public status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
 		super(message);
 		this.name = this.constructor.name;
 		Error.captureStackTrace(this, this.constructor);
-		this.status = status || 500;
+		this.status = status;
 	}
 }

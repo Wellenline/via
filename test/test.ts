@@ -1,6 +1,6 @@
 import test from "ava";
 import * as supertest from "supertest";
-import { app, Body, bootstrap, Get, HttpHeaders, HttpMethodsEnum, INext, IRequest, IResponse, IRoute, Param, Post, Query, Req, Resource, Use } from "../http";
+import { app, Body, bootstrap, Context, Get, HttpMethodsEnum, HttpStatus, IContext, INext, IRequest, IResponse, IRoute, Param, Post, Query, Resource, Use } from "../http";
 
 test("get request", (t) => {
 	@Resource()
@@ -49,7 +49,7 @@ test("laf:json", async (t) => {
 	class Test {
 
 		@Get("/")
-		public json(@Req() req: IRequest, @Param("number") numb: number) {
+		public json(@Context("req") req: IRequest, @Param("number") numb: number) {
 			return {
 				code: 200,
 				message: {
@@ -58,13 +58,11 @@ test("laf:json", async (t) => {
 			};
 		}
 	}
-	t.plan(2);
 	bootstrap({
 		port: 3000,
 	});
 	const response: any = await supertest(app.server).get("/json").expect(200).expect("Content-Type", /json/);
 
-	t.is(response.status, 200);
 	t.is(response.body.message.data, true);
 
 });
@@ -85,7 +83,6 @@ test("laf:query", async (t) => {
 			};
 		}
 	}
-	t.plan(5);
 
 	if (!app.server) {
 		bootstrap({
@@ -95,7 +92,6 @@ test("laf:query", async (t) => {
 
 	const response: any = await supertest(app.server).get("/querytest?hello=world&world=hello").expect(200).expect("Content-Type", /json/);
 
-	t.is(response.status, 200);
 	t.is(response.body.message.hello, "world");
 	t.is(response.body.message.world, "hello");
 	t.is(response.body.message.query.hello, "world");
@@ -117,7 +113,6 @@ test("laf:param", async (t) => {
 			};
 		}
 	}
-	t.plan(3);
 
 	if (!app.server) {
 		bootstrap({ port: 3000 });
@@ -136,14 +131,16 @@ test("laf:body", async (t) => {
 	class BodyTest {
 
 		@Post("/bodytest")
-		@Use((req: IRequest, res: IResponse, next: INext) => {
-			let body = "";
-			req.on("data", (chunk) => {
-				body += chunk.toString();
-			});
-			req.on("end", () => {
-				req.body = JSON.parse(body);
-				next();
+		@Use(async (context: IContext) => {
+			return new Promise((resolve, reject) => {
+				let body = "";
+				context.req.on("data", (chunk) => {
+					body += chunk.toString();
+				});
+				context.req.on("end", () => {
+					context.req.body = JSON.parse(body);
+					resolve();
+				});
 			});
 
 		})
@@ -157,14 +154,12 @@ test("laf:body", async (t) => {
 			};
 		}
 	}
-	t.plan(4);
 
 	if (!app.server) {
 		bootstrap({ port: 3000 });
 	}
 
 	const response = await supertest(app.server).post("/bodytest").send({ hello: "world" }).expect(200);
-	t.is(response.status, 200);
 	t.is(response.body.message.hello, "world");
 	t.is(response.body.message.body.hello, "world");
 	t.is(Object.keys(response.body.message.body).length, 1);
@@ -172,43 +167,41 @@ test("laf:body", async (t) => {
 });
 
 test("laf:html-with-middleware/param", async (t) => {
-	const getNumber = (req: IRequest, res: IResponse, next: INext) => {
-		req.params.number = parseInt(req.params.number, 0);
-
-		t.is(req.params.number, 10);
-		next({
-			hello: 5,
-		});
-
+	const getNumber = async (context: IContext) => {
+		context.req.params.number = parseInt(context.req.params.number, 10);
+		context.test = true;
+		return true;
 	};
 
 	@Resource("/test")
 	class Test {
 
 		@Get("/html/:number")
-		@HttpHeaders({
-			"Content-Type": "text/html",
-		})
 		@Use(getNumber)
-		public html(@Req() req: IRequest, @Param("number") numb: number) {
-			t.is(req.params.number, 10);
-			t.is(req.next.hello, 5);
+		public async html(@Context() context: IContext, @Param("number") n: number) {
+			t.is(context.req.params.number, n);
+			t.is(context.test, true);
 
-			t.is(req.next.hello, numb - req.next.hello);
+			context.headers = {
+				"Content-type": "text/html",
+			};
+
+			context.status = HttpStatus.I_AM_A_TEAPOT;
 
 			return "<h1>Hello<h1>";
 		}
 
 	}
 
-	t.plan(6);
-
 	if (!app.server) {
 		bootstrap({ port: 3000 });
 	}
 
-	const response = await supertest(app.server).get("/test/html/10").expect(200).expect("Content-Type", /html/);
+	try {
+		const response = await supertest(app.server).get("/test/html/10").expect(418).expect("content-type", /html/);
 
-	t.is(response.status, 200);
-	t.is(response.text, "<h1>Hello<h1>");
+		t.is(response.text, "<h1>Hello<h1>");
+	} catch (e) {
+		console.error(e);
+	}
 });
