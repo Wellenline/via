@@ -458,7 +458,7 @@ const isReadable = (obj: any) =>
  * @param context request context
  */
 const resolve = (context: IContext) => {
-	context.res.writeHead(context.status, Object.assign(app.headers, context.headers));
+	context.res.writeHead(context.status, Object.assign({}, app.headers, context.headers));
 
 	if (isReadable(context.res.body)) {
 		return context.res.body.pipe(context.res);
