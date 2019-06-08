@@ -350,7 +350,7 @@ const isReadable = (obj) => isStream(obj) &&
  * @param context request context
  */
 const resolve = (context) => {
-    context.res.writeHead(context.status, Object.assign(exports.app.headers, context.headers));
+    context.res.writeHead(context.status, Object.assign({}, exports.app.headers, context.headers));
     if (isReadable(context.res.body)) {
         return context.res.body.pipe(context.res);
     }
