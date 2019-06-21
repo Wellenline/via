@@ -1,115 +1,61 @@
 import * as fs from "fs";
-import { app, Body, bootstrap, Context, Delete, Get, HttpException, HttpStatus, IContext, Param, Patch, Post, Put, Query, Resource, Use } from "../http";
+import { app, bootstrap, Delete, Get, HttpException, HttpStatus, IContext, Patch, Post, Put, Resource, Before, IRequest, Context } from "../http";
 
 let count = 0;
 const middleware_2 = async (context: IContext) => {
+	console.log("Here")
+
+
+	const time = Date.now();
 	context.middleware_2 = {
 		passing: {
 			data: "to resource fomr middleware",
 		},
+		r: `initiate req ${++count}`,
 	};
-
-	await new Promise((resolve, reject) => {
-		setTimeout(() => {
-			resolve();
-		}, 3000);
-	});
-
-	const time = Date.now();
-	console.log(`initiate req ${++count}`);
 	context.res.setHeader("Response-Time", `${Date.now() - time}ms`);
 	return true;
 	// throw new HttpException("error", HttpStatus.BAD_GATEWAY);
 
 	// next({ ...{ middleware_next: 2 }, ...req.next });
 };
+
 @Resource()
+@Before(async (ctx: any) => {
+	console.log("Resource middleware");
+	return true;
+})
 export class Example {
-	constructor() {
-		console.log("example init");
-	}
-	@Get("/error")
-	@Use(middleware_2)
-	public async error(@Query("error") error: boolean) {
-
-		if (error) {
-			throw new HttpException("Error Happened", HttpStatus.I_AM_A_TEAPOT);
-		}
-
-		return "Append error query param to trigger httpException";
-	}
-
-	@Get("/string")
-	public async get(@Context() context: IContext) {
-		/*req.route.headers = {
-			"Content-type": "text/html",
-		};
-		req.route.httpStatus = 200;*/
-		context.status = 200;
-		context.headers = {
-			"Content-type": "text/html",
-		};
-
-		return "<h2>Hello</h2> <b>IM a html string</b>";
-		// return "<h2>Hello</h2> <b>IM a html string</b>";
+	@Get("/")
+	public async hello() {
+		return "world";
 	}
 
 	@Get("/json/:id?/hello")
-	@Use(middleware_2)
-	public async json(@Context() context: IContext, @Param() params: any, @Query() query: any) {
-
+	@Before(middleware_2)
+	public async json(@Context() ctx: IContext, @Context("params") params: any) {
+		/*ctx.headers = {
+			"Content-type": "text/html",
+		};*/
 		return {
-			cotext: context.middleware_2,
-			hello: app,
-			next: context.req.next,
+			context: ctx.middleware_2,
+		 	hello: app,
+			next: ctx.next,
+			paramss: ctx.params,
 			params,
-			query,
+			query: ctx.query,
+			headers: ctx.headers,
 		};
 	}
 
 	@Get("/stream")
-	public async stream() {
-		return fs.readFileSync("./test/logo.png");
-	}
-
-	@Post("/post")
-	public async post(@Body() body: any) {
-		console.log("posting", body);
-		return {
-			hel: 1,
-		};
-	}
-
-	@Put("/json/:id?/hello")
-	public async update(@Body() body: any) {
-		return {
-			body,
-			upadting: true,
-		};
-	}
-
-	@Patch("/patch")
-	public async patch(@Body() body: any) {
-		return body;
-	}
-
-	@Delete("/json/:id?")
-	public async delete(@Param() param: any) {
-		return {
-			DELETING: true,
-			param,
-		};
-	}
-}
-
-@Resource("/test")
-export class Test {
-	@Get("/stream")
-	public async stream(@Context() context: IContext) {
-		context.headers = {
+	public async stream(ctx: any) {
+		ctx.headers = {
 			"Content-type": "image/png",
 		};
-		return fs.readFileSync("../test/logo.png");
+		const image = fs.readFileSync("../test/logo.png");
+		return image;
+		// ctx.res.end(image, "binary");
 	}
 }
 

@@ -12,6 +12,7 @@
 		"max-classes-per-file": true,
 		"max-line-length": false,
 		"variable-name": false,
+		"object-literal-sort-keys": false,
 		"no-console": false,
 		"indent": [
 			true,

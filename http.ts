@@ -2,7 +2,6 @@ import * as fs from "fs";
 import { createServer, IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
 
 import * as http2 from "http2";
-import "reflect-metadata";
 import { parse } from "url";
 
 export enum HttpStatus {
@@ -68,7 +67,7 @@ export interface IParam {
 	fn: (req?: IRequest) => void;
 }
 export interface IRoute {
-	method: number;
+	method: HttpMethodsEnum;
 	path: string;
 	name: string;
 	middleware: any[];
@@ -114,14 +113,14 @@ export interface IException {
 export type INext = (data?: object) => void;
 
 export enum HttpMethodsEnum {
-	GET = 0,
-	POST,
-	PUT,
-	DELETE,
-	PATCH,
-	MIXED,
-	HEAD,
-	OPTIONS,
+	GET = "GET",
+	POST = "POST",
+	PUT = "PUT",
+	DELETE = "DELETE",
+	PATCH = "PATCH",
+	MIXED = "MIXED",
+	HEAD = "HEAD",
+	OPTIONS = "OPTIONS",
 }
 export enum Constants {
 	INVALID_ROUTE = "Invalid route",
@@ -140,13 +139,19 @@ export const app: IApp = {
 	routes: [],
 };
 
+const decorators: any = {
+	route: [],
+	param: [],
+	middleware: [],
+};
+
 export const bootstrap = (options: IOptions) => {
 	if (options.middleware) {
 		app.middleware = options.middleware;
 	}
 
 	if (options.autoload) {
-		fs.readdirSync(options.autoload).map((file) => {
+		fs.readdirSync(options.autoload).map((file: string) => {
 			if (file.endsWith(".js")) {
 				require(options.autoload + "/" + file.replace(/\.[^.$]+$/, ""));
 			}
@@ -161,34 +166,42 @@ export const bootstrap = (options: IOptions) => {
  * Resource decorator
  * @param path route path
  */
-export const Resource = (path: string = "") => (target: any) => {
-	const resourceMiddleware = Reflect.getMetadata(Constants.ROUTE_MIDDLEWARE, target) || [];
-	const routes = Reflect.getMetadata(Constants.ROUTE_DATA, target.prototype) || [];
+export const Resource = (path: string = "") => {
+	return (target: any) => {
+		let middleware: any[] = [];
+		const resource = decorators.middleware.find((m: any) => m.resource && m.target === target.constructor);
+		if (resource && resource.middleware) {
+			middleware = middleware.concat(resource.middleware);
+		}
+		const routes = decorators.route.filter((route: any) => route.target === target);
+		app.routes = app.routes.concat(routes.map((route: any ) => {
+			const func = decorators.middleware.find((m: any) => m.descriptor && m.descriptor.value === route.descriptor.value && m.target === route.target);
 
-	app.routes = app.routes.concat(routes.map((route: IRoute | any) => {
-		const middleware = Reflect.getMetadata(Constants.ROUTE_MIDDLEWARE + route.name, target.prototype) || [];
-		const params = Reflect.getMetadata(Constants.ROUTE_PARAMS + route.name, target.prototype) || [];
+			const params = decorators.param.filter((m: any) => route.name === m.name && m.target === route.target);
 
-		return {
-			fn: route.descriptor.value,
-			method: route.method,
-			middleware: [...resourceMiddleware, ...middleware],
-			name: route.name,
-			params,
-			path: path + route.path,
-		};
-	}));
+			if (func && func.middleware) {
+				middleware = middleware.concat(func.middleware);
+			}
 
-	Reflect.defineMetadata(Constants.ROUTE_DATA, app.routes, target);
+			return {
+				target: route.target,
+				fn: route.descriptor.value,
+				path: path + route.path,
+				middleware,
+				params,
+				name: route.name,
+				method: route.method,
+			};
+		}));
+
+	};
 };
 
 // Decorators
-/**
- * Route/Resource middleware
- * @param middleware
- */
-export const Use = (...middleware: any[]) => (target: object, propertyKey: string) => {
-	Reflect.defineMetadata(Constants.ROUTE_MIDDLEWARE + (propertyKey ? propertyKey : ""), middleware, target);
+export const Before = (...middleware: any[]) => {
+	return (target: any, name?: string, descriptor?: PropertyDescriptor) => {
+		decorators.middleware.push({ middleware, resource: descriptor ? false : true, descriptor, target: target.constructor });
+	};
 };
 
 /**
@@ -196,11 +209,9 @@ export const Use = (...middleware: any[]) => (target: object, propertyKey: strin
  * @param method HttpMethodsEnum
  * @param path Route path
  */
-export const Route = (method: HttpMethodsEnum, path: string) =>
-	(target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => {
-		const meta = Reflect.getMetadata(Constants.ROUTE_DATA, target) || [];
-		meta.push({ method, path, name, descriptor });
-		Reflect.defineMetadata(Constants.ROUTE_DATA, meta, target);
+export const Route = (method: HttpMethodsEnum, path: string, middleware?: any[]) =>
+	(target: object, name: string, descriptor: PropertyDescriptor) => {
+		decorators.route.push({ method, path, name, middleware, descriptor, target: target.constructor });
 	};
 
 /**
@@ -251,29 +262,7 @@ export const Head = (path: string) => Route(HttpMethodsEnum.HEAD, path);
  */
 export const Options = (path: string) => Route(HttpMethodsEnum.OPTIONS, path);
 
-/**
- * Get request parameters
- * @param key optional key to lookup
- */
-export const Param = (key?: string) => decorate((req: IRequest) => !key ? req.params : req.params[key]);
-
-/**
- * Get request query parameters
- * @param key optional key to lookup
- */
-export const Query = (key?: string) => decorate((req: IRequest) => !key ? req.query : req.query[key]);
-
-/**
- * Get POST request body
- * @param key optional key to lookup
- */
-export const Body = (key?: string) => decorate((req: IRequest) => !key ? req.body : req.body[key]);
-
-/**
- * Route context
- * @param key optional key to lookup
- */
-export const Context = (key?: string) => decorate((req: IRequest) => !key ? req.context : req.context[key]);
+export const Context = (key?: string) => Params((req: IRequest) => !key ? req.context : req.context[key]);
 
 /**
  * Request handler
@@ -290,10 +279,13 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 		req.query = decodeValues(req.parsed.query);
 
 		req.context = {
+			status: HttpStatus.OK,
 			headers: app.headers,
+			params: req.params,
+			route: req.route,
+			query: req.query,
 			req,
 			res,
-			status: HttpStatus.OK,
 		};
 
 		if (app.middleware.length > 0) {
@@ -303,7 +295,6 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 		if (!req.route) {
 			throw new HttpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
 		}
-
 		if (req.route.middleware && app.next) {
 			await execute(req.route.middleware, req.context);
 		}
@@ -324,25 +315,6 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 		}));
 		res.end();
 	}
-};
-
-/**
- * Get decorated arguments
- * @param req Request
- */
-const args = (req: IRequest) => {
-	const pArgs = [];
-	if (req.route.params) {
-		req.route.params.sort((a, b) => a.index - b.index);
-		for (const param of req.route.params) {
-			let result;
-			if (param !== undefined) {
-				result = param.fn(req);
-			}
-			pArgs.push(result);
-		}
-	}
-	return pArgs;
 };
 
 /**
@@ -389,7 +361,7 @@ const getRoute = (req: IRequest) => {
 			.replace("/", "\\/");
 
 		const matches = base.match(new RegExp(`^${path}$`));
-		if (matches && (route.method === Object(HttpMethodsEnum)[req.method]
+		if (matches && (route.method === req.method
 			|| route.method === HttpMethodsEnum.MIXED)) {
 
 			req.params = Object.assign(req.params, keys.reduce((val: any, key, index) => {
@@ -402,18 +374,33 @@ const getRoute = (req: IRequest) => {
 	});
 };
 
-/**
- * Decorate
- * @param fn
- */
-const decorate = (fn: any) => {
-	return (target: object, name: string, index: number) => {
+const args = (req: IRequest) => {
+	const pArgs = [];
+	if (req.route.params) {
+		req.route.params.sort((a, b) => a.index - b.index);
+		for (const param of req.route.params) {
+			let result;
+			if (param !== undefined) {
+				result = param.fn(req);
+			}
+			pArgs.push(result);
+		}
+	}
+	return pArgs;
+};
+
+const Params = (fn: any) => {
+	/*return (target: object, name: string, index: number) => {
+
 		const meta = Reflect.getMetadata(Constants.ROUTE_PARAMS + name, target) || [];
 		meta.push({ index, name, fn });
 		Reflect.defineMetadata(Constants.ROUTE_PARAMS + name, meta, target);
+	};*/
+
+	return (target: object, name: string, index: number) => {
+		decorators.param.push({ index, name, fn, target: target.constructor });
 	};
 };
-
 /**
  * Decode values
  * @param obj parameter values
@@ -441,7 +428,7 @@ const isStream = (obj: any) =>
  */
 const isObject = (obj: any) =>
 	obj &&
-	typeof obj === "object";
+	typeof obj === "object" && !Buffer.isBuffer(obj);
 
 /**
  * Check if obj is readable
@@ -458,7 +445,6 @@ const isReadable = (obj: any) =>
  */
 const resolve = (context: IContext) => {
 	context.res.writeHead(context.status, Object.assign({}, app.headers, context.headers));
-
 	if (isReadable(context.res.body)) {
 		return context.res.body.pipe(context.res);
 	}

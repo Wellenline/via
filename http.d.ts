@@ -1,7 +1,6 @@
 /// <reference types="node" />
 import { IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
 import * as http2 from "http2";
-import "reflect-metadata";
 export declare enum HttpStatus {
     CONTINUE = 100,
     SWITCHING_PROTOCOLS = 101,
@@ -64,7 +63,7 @@ export interface IParam {
     fn: (req?: IRequest) => void;
 }
 export interface IRoute {
-    method: number;
+    method: HttpMethodsEnum;
     path: string;
     name: string;
     middleware: any[];
@@ -106,14 +105,14 @@ export interface IException {
 }
 export declare type INext = (data?: object) => void;
 export declare enum HttpMethodsEnum {
-    GET = 0,
-    POST = 1,
-    PUT = 2,
-    DELETE = 3,
-    PATCH = 4,
-    MIXED = 5,
-    HEAD = 6,
-    OPTIONS = 7
+    GET = "GET",
+    POST = "POST",
+    PUT = "PUT",
+    DELETE = "DELETE",
+    PATCH = "PATCH",
+    MIXED = "MIXED",
+    HEAD = "HEAD",
+    OPTIONS = "OPTIONS"
 }
 export declare enum Constants {
     INVALID_ROUTE = "Invalid route",
@@ -129,76 +128,53 @@ export declare const bootstrap: (options: IOptions) => void;
  * @param path route path
  */
 export declare const Resource: (path?: string) => (target: any) => void;
-/**
- * Route/Resource middleware
- * @param middleware
- */
-export declare const Use: (...middleware: any[]) => (target: object, propertyKey: string) => void;
+export declare const Before: (...middleware: any[]) => (target: any, name?: string, descriptor?: PropertyDescriptor) => void;
 /**
  * @Route Decorator
  * @param method HttpMethodsEnum
  * @param path Route path
  */
-export declare const Route: (method: HttpMethodsEnum, path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare const Route: (method: HttpMethodsEnum, path: string, middleware?: any[]) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Get: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare const Get: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Post: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare const Post: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Put: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare const Put: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Patch: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare const Patch: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Delete: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare const Delete: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Mixed: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare const Mixed: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Head: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare const Head: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 /**
  * @Get Decorator
  * @param path Get path
  */
-export declare const Options: (path: string) => (target: object, name: string, descriptor: TypedPropertyDescriptor<any>) => void;
-/**
- * Get request parameters
- * @param key optional key to lookup
- */
-export declare const Param: (key?: string) => (target: object, name: string, index: number) => void;
-/**
- * Get request query parameters
- * @param key optional key to lookup
- */
-export declare const Query: (key?: string) => (target: object, name: string, index: number) => void;
-/**
- * Get POST request body
- * @param key optional key to lookup
- */
-export declare const Body: (key?: string) => (target: object, name: string, index: number) => void;
-/**
- * Route context
- * @param key optional key to lookup
- */
+export declare const Options: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 export declare const Context: (key?: string) => (target: object, name: string, index: number) => void;
 /**
  * HttpException error

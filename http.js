@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const http_1 = require("http");
-require("reflect-metadata");
 const url_1 = require("url");
 var HttpStatus;
 (function (HttpStatus) {
@@ -53,14 +52,14 @@ var HttpStatus;
 })(HttpStatus = exports.HttpStatus || (exports.HttpStatus = {}));
 var HttpMethodsEnum;
 (function (HttpMethodsEnum) {
-    HttpMethodsEnum[HttpMethodsEnum["GET"] = 0] = "GET";
-    HttpMethodsEnum[HttpMethodsEnum["POST"] = 1] = "POST";
-    HttpMethodsEnum[HttpMethodsEnum["PUT"] = 2] = "PUT";
-    HttpMethodsEnum[HttpMethodsEnum["DELETE"] = 3] = "DELETE";
-    HttpMethodsEnum[HttpMethodsEnum["PATCH"] = 4] = "PATCH";
-    HttpMethodsEnum[HttpMethodsEnum["MIXED"] = 5] = "MIXED";
-    HttpMethodsEnum[HttpMethodsEnum["HEAD"] = 6] = "HEAD";
-    HttpMethodsEnum[HttpMethodsEnum["OPTIONS"] = 7] = "OPTIONS";
+    HttpMethodsEnum["GET"] = "GET";
+    HttpMethodsEnum["POST"] = "POST";
+    HttpMethodsEnum["PUT"] = "PUT";
+    HttpMethodsEnum["DELETE"] = "DELETE";
+    HttpMethodsEnum["PATCH"] = "PATCH";
+    HttpMethodsEnum["MIXED"] = "MIXED";
+    HttpMethodsEnum["HEAD"] = "HEAD";
+    HttpMethodsEnum["OPTIONS"] = "OPTIONS";
 })(HttpMethodsEnum = exports.HttpMethodsEnum || (exports.HttpMethodsEnum = {}));
 var Constants;
 (function (Constants) {
@@ -77,6 +76,11 @@ exports.app = {
     middleware: [],
     next: false,
     routes: [],
+};
+const decorators = {
+    route: [],
+    param: [],
+    middleware: [],
 };
 exports.bootstrap = (options) => {
     if (options.middleware) {
@@ -96,40 +100,45 @@ exports.bootstrap = (options) => {
  * Resource decorator
  * @param path route path
  */
-exports.Resource = (path = "") => (target) => {
-    const resourceMiddleware = Reflect.getMetadata(Constants.ROUTE_MIDDLEWARE, target) || [];
-    const routes = Reflect.getMetadata(Constants.ROUTE_DATA, target.prototype) || [];
-    exports.app.routes = exports.app.routes.concat(routes.map((route) => {
-        const middleware = Reflect.getMetadata(Constants.ROUTE_MIDDLEWARE + route.name, target.prototype) || [];
-        const params = Reflect.getMetadata(Constants.ROUTE_PARAMS + route.name, target.prototype) || [];
-        return {
-            fn: route.descriptor.value,
-            method: route.method,
-            middleware: [...resourceMiddleware, ...middleware],
-            name: route.name,
-            params,
-            path: path + route.path,
-        };
-    }));
-    Reflect.defineMetadata(Constants.ROUTE_DATA, exports.app.routes, target);
+exports.Resource = (path = "") => {
+    return (target) => {
+        let middleware = [];
+        const resource = decorators.middleware.find((m) => m.resource && m.target === target.constructor);
+        if (resource && resource.middleware) {
+            middleware = middleware.concat(resource.middleware);
+        }
+        const routes = decorators.route.filter((route) => route.target === target);
+        exports.app.routes = exports.app.routes.concat(routes.map((route) => {
+            const func = decorators.middleware.find((m) => m.descriptor && m.descriptor.value === route.descriptor.value && m.target === route.target);
+            const params = decorators.param.filter((m) => route.name === m.name && m.target === route.target);
+            if (func && func.middleware) {
+                middleware = middleware.concat(func.middleware);
+            }
+            return {
+                target: route.target,
+                fn: route.descriptor.value,
+                path: path + route.path,
+                middleware,
+                params,
+                name: route.name,
+                method: route.method,
+            };
+        }));
+    };
 };
 // Decorators
-/**
- * Route/Resource middleware
- * @param middleware
- */
-exports.Use = (...middleware) => (target, propertyKey) => {
-    Reflect.defineMetadata(Constants.ROUTE_MIDDLEWARE + (propertyKey ? propertyKey : ""), middleware, target);
+exports.Before = (...middleware) => {
+    return (target, name, descriptor) => {
+        decorators.middleware.push({ middleware, resource: descriptor ? false : true, descriptor, target: target.constructor });
+    };
 };
 /**
  * @Route Decorator
  * @param method HttpMethodsEnum
  * @param path Route path
  */
-exports.Route = (method, path) => (target, name, descriptor) => {
-    const meta = Reflect.getMetadata(Constants.ROUTE_DATA, target) || [];
-    meta.push({ method, path, name, descriptor });
-    Reflect.defineMetadata(Constants.ROUTE_DATA, meta, target);
+exports.Route = (method, path, middleware) => (target, name, descriptor) => {
+    decorators.route.push({ method, path, name, middleware, descriptor, target: target.constructor });
 };
 /**
  * @Get Decorator
@@ -171,26 +180,7 @@ exports.Head = (path) => exports.Route(HttpMethodsEnum.HEAD, path);
  * @param path Get path
  */
 exports.Options = (path) => exports.Route(HttpMethodsEnum.OPTIONS, path);
-/**
- * Get request parameters
- * @param key optional key to lookup
- */
-exports.Param = (key) => decorate((req) => !key ? req.params : req.params[key]);
-/**
- * Get request query parameters
- * @param key optional key to lookup
- */
-exports.Query = (key) => decorate((req) => !key ? req.query : req.query[key]);
-/**
- * Get POST request body
- * @param key optional key to lookup
- */
-exports.Body = (key) => decorate((req) => !key ? req.body : req.body[key]);
-/**
- * Route context
- * @param key optional key to lookup
- */
-exports.Context = (key) => decorate((req) => !key ? req.context : req.context[key]);
+exports.Context = (key) => Params((req) => !key ? req.context : req.context[key]);
 /**
  * Request handler
  * @param req Request
@@ -205,10 +195,13 @@ const onRequest = async (req, res) => {
         req.params = decodeValues(req.params);
         req.query = decodeValues(req.parsed.query);
         req.context = {
+            status: HttpStatus.OK,
             headers: exports.app.headers,
+            params: req.params,
+            route: req.route,
+            query: req.query,
             req,
             res,
-            status: HttpStatus.OK,
         };
         if (exports.app.middleware.length > 0) {
             await execute(exports.app.middleware, req.context);
@@ -233,24 +226,6 @@ const onRequest = async (req, res) => {
         }));
         res.end();
     }
-};
-/**
- * Get decorated arguments
- * @param req Request
- */
-const args = (req) => {
-    const pArgs = [];
-    if (req.route.params) {
-        req.route.params.sort((a, b) => a.index - b.index);
-        for (const param of req.route.params) {
-            let result;
-            if (param !== undefined) {
-                result = param.fn(req);
-            }
-            pArgs.push(result);
-        }
-    }
-    return pArgs;
 };
 /**
  * Run middleware
@@ -290,7 +265,7 @@ const getRoute = (req) => {
             .replace(/:[^\/]+/g, "([^\/]+)")
             .replace("/", "\\/");
         const matches = base.match(new RegExp(`^${path}$`));
-        if (matches && (route.method === Object(HttpMethodsEnum)[req.method]
+        if (matches && (route.method === req.method
             || route.method === HttpMethodsEnum.MIXED)) {
             req.params = Object.assign(req.params, keys.reduce((val, key, index) => {
                 val[key] = matches[index + 1];
@@ -300,15 +275,29 @@ const getRoute = (req) => {
         }
     });
 };
-/**
- * Decorate
- * @param fn
- */
-const decorate = (fn) => {
-    return (target, name, index) => {
+const args = (req) => {
+    const pArgs = [];
+    if (req.route.params) {
+        req.route.params.sort((a, b) => a.index - b.index);
+        for (const param of req.route.params) {
+            let result;
+            if (param !== undefined) {
+                result = param.fn(req);
+            }
+            pArgs.push(result);
+        }
+    }
+    return pArgs;
+};
+const Params = (fn) => {
+    /*return (target: object, name: string, index: number) => {
+
         const meta = Reflect.getMetadata(Constants.ROUTE_PARAMS + name, target) || [];
         meta.push({ index, name, fn });
         Reflect.defineMetadata(Constants.ROUTE_PARAMS + name, meta, target);
+    };*/
+    return (target, name, index) => {
+        decorators.param.push({ index, name, fn, target: target.constructor });
     };
 };
 /**
@@ -336,7 +325,7 @@ const isStream = (obj) => obj &&
  * @param obj any
  */
 const isObject = (obj) => obj &&
-    typeof obj === "object";
+    typeof obj === "object" && !Buffer.isBuffer(obj);
 /**
  * Check if obj is readable
  * @param obj any
