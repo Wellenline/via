@@ -264,6 +264,8 @@ export const Options = (path: string) => Route(HttpMethodsEnum.OPTIONS, path);
 
 export const Context = (key?: string) => Params((req: IRequest) => !key ? req.context : req.context[key]);
 
+const Params = (fn: any) => (target: object, name: string, index: number) => decorators.param.push({ index, name, fn, target: target.constructor });
+
 /**
  * Request handler
  * @param req Request
@@ -389,18 +391,6 @@ const args = (req: IRequest) => {
 	return pArgs;
 };
 
-const Params = (fn: any) => {
-	/*return (target: object, name: string, index: number) => {
-
-		const meta = Reflect.getMetadata(Constants.ROUTE_PARAMS + name, target) || [];
-		meta.push({ index, name, fn });
-		Reflect.defineMetadata(Constants.ROUTE_PARAMS + name, meta, target);
-	};*/
-
-	return (target: object, name: string, index: number) => {
-		decorators.param.push({ index, name, fn, target: target.constructor });
-	};
-};
 /**
  * Decode values
  * @param obj parameter values

@@ -175,7 +175,7 @@ export declare const Head: (path: string) => (target: object, name: string, desc
  * @param path Get path
  */
 export declare const Options: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-export declare const Context: (key?: string) => (target: object, name: string, index: number) => void;
+export declare const Context: (key?: string) => (target: object, name: string, index: number) => any;
 /**
  * HttpException error
  */

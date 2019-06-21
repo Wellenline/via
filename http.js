@@ -181,6 +181,7 @@ exports.Head = (path) => exports.Route(HttpMethodsEnum.HEAD, path);
  */
 exports.Options = (path) => exports.Route(HttpMethodsEnum.OPTIONS, path);
 exports.Context = (key) => Params((req) => !key ? req.context : req.context[key]);
+const Params = (fn) => (target, name, index) => decorators.param.push({ index, name, fn, target: target.constructor });
 /**
  * Request handler
  * @param req Request
@@ -288,17 +289,6 @@ const args = (req) => {
         }
     }
     return pArgs;
-};
-const Params = (fn) => {
-    /*return (target: object, name: string, index: number) => {
-
-        const meta = Reflect.getMetadata(Constants.ROUTE_PARAMS + name, target) || [];
-        meta.push({ index, name, fn });
-        Reflect.defineMetadata(Constants.ROUTE_PARAMS + name, meta, target);
-    };*/
-    return (target, name, index) => {
-        decorators.param.push({ index, name, fn, target: target.constructor });
-    };
 };
 /**
  * Decode values
