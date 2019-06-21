@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
 import * as http2 from "http2";
 import "reflect-metadata";

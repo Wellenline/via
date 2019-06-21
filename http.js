@@ -255,8 +255,7 @@ const args = (req) => {
 /**
  * Run middleware
  * @param list
- * @param req
- * @param res
+ * @param context
  */
 const execute = async (list, context) => {
     for (const fn of list) {
@@ -280,7 +279,7 @@ const getRoute = (req) => {
         const base = match[1] || match[2] || match[3];
         const keys = [];
         const regex = /:([^\/?]+)\??/g;
-        route.path = route.path.endsWith("/") ? route.path.slice(0, -1) : route.path;
+        route.path = route.path.endsWith("/") && route.path.length > 1 ? route.path.slice(0, -1) : route.path;
         let params = regex.exec(route.path);
         while (params !== null) {
             keys.push(params[1]);
@@ -314,7 +313,7 @@ const decorate = (fn) => {
 };
 /**
  * Decode values
- * @param object parameter values
+ * @param obj parameter values
  */
 const decodeValues = (obj) => {
     const decoded = {};
