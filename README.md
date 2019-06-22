@@ -37,8 +37,8 @@ import { bootstrap, Resource, Get, app, IContext } from "@wellenline/via";
 export class Hello {
 	@Get("/hello/:hello")
 	@Before(async (context: IContext) => {
-        return context.params.hello === "world"; // continue if hello === world
-    });
+		return context.params.hello === "world"; // continue if hello === world
+	});
 	public async index() {
 		return {
 			hello: "world"
