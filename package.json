@@ -3,12 +3,13 @@
 	"version": "1.1.1",
 	"description": "Lightweight express like web framework",
 	"main": "http.js",
-	"types": "http.d.ts",
 	"author": "Mihkel Baranov",
 	"license": "MIT",
+	"typings": "http.d.ts",
 	"scripts": {
 		"dev": "tsc --watch",
 		"build": "tsc",
+		"docts": "docts",
 		"test": "ava test/**/*.js",
 		"docs": "typedoc --out docs http.ts --exclude \"test/*.ts\""
 	},
