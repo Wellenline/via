@@ -63,11 +63,11 @@ bootstrap({
 	// middleware: [body_parser],
 	port: 3000,
 	// tslint:disable-next-line:object-literal-sort-keys
-	http2: {
+	/*http2: {
 		cert: fs.readFileSync(__dirname + "/keys/server.crt"),
 		key: fs.readFileSync(__dirname + "/keys/server.key"),
 		// tslint:disable-next-line:object-literal-sort-keys
 		allowHTTP1: true,
 	},
-
+*/
 });

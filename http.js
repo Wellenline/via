@@ -140,6 +140,7 @@ exports.Before = (...middleware) => {
 exports.Route = (method, path, middleware) => (target, name, descriptor) => {
     decorators.route.push({ method, path, name, middleware, descriptor, target: target.constructor });
 };
+const Params = (fn) => (target, name, index) => decorators.param.push({ index, name, fn, target: target.constructor });
 /**
  * @Get Decorator
  * @param path Get path
@@ -181,7 +182,6 @@ exports.Head = (path) => exports.Route(HttpMethodsEnum.HEAD, path);
  */
 exports.Options = (path) => exports.Route(HttpMethodsEnum.OPTIONS, path);
 exports.Context = (key) => Params((req) => !key ? req.context : req.context[key]);
-const Params = (fn) => (target, name, index) => decorators.param.push({ index, name, fn, target: target.constructor });
 /**
  * Request handler
  * @param req Request

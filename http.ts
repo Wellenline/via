@@ -53,7 +53,6 @@ export enum HttpStatus {
 export interface IResponse extends ServerResponse {
 	body: any;
 }
-
 export interface IApp {
 	server?: Server;
 	routes: IRoute[];
@@ -214,6 +213,8 @@ export const Route = (method: HttpMethodsEnum, path: string, middleware?: any[])
 		decorators.route.push({ method, path, name, middleware, descriptor, target: target.constructor });
 	};
 
+const Params = (fn: any) => (target: object, name: string, index: number) => decorators.param.push({ index, name, fn, target: target.constructor });
+
 /**
  * @Get Decorator
  * @param path Get path
@@ -263,8 +264,6 @@ export const Head = (path: string) => Route(HttpMethodsEnum.HEAD, path);
 export const Options = (path: string) => Route(HttpMethodsEnum.OPTIONS, path);
 
 export const Context = (key?: string) => Params((req: IRequest) => !key ? req.context : req.context[key]);
-
-const Params = (fn: any) => (target: object, name: string, index: number) => decorators.param.push({ index, name, fn, target: target.constructor });
 
 /**
  * Request handler
