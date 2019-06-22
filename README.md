@@ -1,5 +1,6 @@
 # Via
 ![Via](https://raw.githubusercontent.com/Wellenline/via/http2/logo.png)
+Simple, lightwieght & dependency free HTTP routing framework
 ### Installation
 ```sh
 $ npm add @wellenline/via
@@ -24,7 +25,7 @@ bootstrap({
 });
 ```
 
-## API
+## Examples
 ### Hooks (middleware)
 ```typescript
 @Before((context: IContext) => void)
@@ -38,7 +39,7 @@ export class Hello {
 	@Get("/hello/:hello")
 	@Before(async (context: IContext) => {
 		return context.params.hello === "world"; // continue if hello === world
-	});
+	);
 	public async index() {
 		return {
 			hello: "world"
