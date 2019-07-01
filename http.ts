@@ -198,7 +198,7 @@ export const Resource = (path: string = "") => {
 // Decorators
 export const Before = (...middleware: any[]) => {
 	return (target: any, name?: string, descriptor?: PropertyDescriptor) => {
-		decorators.middleware.push({ middleware, resource: descriptor ? false : true, descriptor, target: target.constructor });
+		decorators.middleware.push({ middleware, resource: descriptor ? false : true, descriptor, target: descriptor ? target.constructor : target });
 	};
 };
 
