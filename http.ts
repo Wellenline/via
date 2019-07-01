@@ -167,26 +167,25 @@ export const bootstrap = (options: IOptions) => {
  */
 export const Resource = (path: string = "") => {
 	return (target: any) => {
-		let middleware: any[] = [];
+		const resource_before: any[] = [];
 		const resource = decorators.middleware.find((m: any) => m.resource && m.target === target.constructor);
 		if (resource && resource.middleware) {
-			middleware = middleware.concat(resource.middleware);
+			resource_before.push(...resource.middleware); // = middleware.concat(resource.middleware);
 		}
 		const routes = decorators.route.filter((route: any) => route.target === target);
-		app.routes = app.routes.concat(routes.map((route: any ) => {
+		app.routes = app.routes.concat(routes.map((route: any) => {
 			const func = decorators.middleware.find((m: any) => m.descriptor && m.descriptor.value === route.descriptor.value && m.target === route.target);
-
 			const params = decorators.param.filter((m: any) => route.name === m.name && m.target === route.target);
-
+			const route_before = [];
 			if (func && func.middleware) {
-				middleware = middleware.concat(func.middleware);
+				route_before.push(...func.middleware); // = middleware.concat(func.middleware);
 			}
 
 			return {
 				target: route.target,
 				fn: route.descriptor.value,
 				path: path + route.path,
-				middleware,
+				middleware: resource_before.concat(route_before),
 				params,
 				name: route.name,
 				method: route.method,
