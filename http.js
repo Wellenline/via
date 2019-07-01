@@ -103,7 +103,7 @@ exports.bootstrap = (options) => {
 exports.Resource = (path = "") => {
     return (target) => {
         const resource_before = [];
-        const resource = decorators.middleware.find((m) => m.resource && m.target === target.constructor);
+        const resource = decorators.middleware.find((m) => m.resource && m.target === target);
         if (resource && resource.middleware) {
             resource_before.push(...resource.middleware); // = middleware.concat(resource.middleware);
         }

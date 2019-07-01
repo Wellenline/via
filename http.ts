@@ -168,7 +168,8 @@ export const bootstrap = (options: IOptions) => {
 export const Resource = (path: string = "") => {
 	return (target: any) => {
 		const resource_before: any[] = [];
-		const resource = decorators.middleware.find((m: any) => m.resource && m.target === target.constructor);
+		const resource = decorators.middleware.find((m: any) => m.resource && m.target === target);
+
 		if (resource && resource.middleware) {
 			resource_before.push(...resource.middleware); // = middleware.concat(resource.middleware);
 		}
@@ -191,7 +192,6 @@ export const Resource = (path: string = "") => {
 				method: route.method,
 			};
 		}));
-
 	};
 };
 
