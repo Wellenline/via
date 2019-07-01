@@ -130,7 +130,7 @@ exports.Resource = (path = "") => {
 // Decorators
 exports.Before = (...middleware) => {
     return (target, name, descriptor) => {
-        decorators.middleware.push({ middleware, resource: descriptor ? false : true, descriptor, target: target.constructor });
+        decorators.middleware.push({ middleware, resource: descriptor ? false : true, descriptor, target: descriptor ? target.constructor : target });
     };
 };
 /**
