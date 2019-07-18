@@ -1,208 +1,457 @@
-/*import test from "ava";
-import * as supertest from "supertest";
-import { app, Body, bootstrap, Context, Get, HttpMethodsEnum, HttpStatus, IContext, INext, IRequest, IResponse, IRoute, Param, Post, Query, Resource, Use } from "../http";
+import * as fs from "fs";
+import { createServer, IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
 
-test("get request", (t) => {
-	@Resource()
-	class Test {
-		@Get("/test")
-		public getTest() {
-			// test
-			return {
-				code: 200,
-				message: 1,
-			};
-		}
+import * as http2 from "http2";
+import { parse } from "url";
+
+export enum HttpStatus {
+	CONTINUE = 100,
+	SWITCHING_PROTOCOLS = 101,
+	PROCESSING = 102,
+	OK = 200,
+	CREATED = 201,
+	ACCEPTED = 202,
+	NON_AUTHORITATIVE_INFORMATION = 203,
+	NO_CONTENT = 204,
+	RESET_CONTENT = 205,
+	PARTIAL_CONTENT = 206,
+	AMBIGUOUS = 300,
+	MOVED_PERMANENTLY = 301,
+	FOUND = 302,
+	SEE_OTHER = 303,
+	NOT_MODIFIED = 304,
+	TEMPORARY_REDIRECT = 307,
+	PERMANENT_REDIRECT = 308,
+	BAD_REQUEST = 400,
+	UNAUTHORIZED = 401,
+	PAYMENT_REQUIRED = 402,
+	FORBIDDEN = 403,
+	NOT_FOUND = 404,
+	METHOD_NOT_ALLOWED = 405,
+	NOT_ACCEPTABLE = 406,
+	PROXY_AUTHENTICATION_REQUIRED = 407,
+	REQUEST_TIMEOUT = 408,
+	CONFLICT = 409,
+	GONE = 410,
+	LENGTH_REQUIRED = 411,
+	PRECONDITION_FAILED = 412,
+	PAYLOAD_TOO_LARGE = 413,
+	URI_TOO_LONG = 414,
+	UNSUPPORTED_MEDIA_TYPE = 415,
+	REQUESTED_RANGE_NOT_SATISFIABLE = 416,
+	EXPECTATION_FAILED = 417,
+	I_AM_A_TEAPOT = 418,
+	UNPROCESSABLE_ENTITY = 422,
+	TOO_MANY_REQUESTS = 429,
+	INTERNAL_SERVER_ERROR = 500,
+	NOT_IMPLEMENTED = 501,
+	BAD_GATEWAY = 502,
+	SERVICE_UNAVAILABLE = 503,
+	GATEWAY_TIMEOUT = 504,
+	HTTP_VERSION_NOT_SUPPORTED = 505,
+}
+export interface IResponse extends ServerResponse {
+	body: any;
+}
+export interface IApp {
+	server?: Server;
+	routes: IRoute[];
+	next: boolean;
+	middleware: any[];
+	headers: OutgoingHttpHeaders;
+}
+export interface IParam {
+	index?: number;
+	name?: string;
+	fn: (req?: IRequest) => void;
+}
+export interface IRoute {
+	method: HttpMethodsEnum;
+	path: string;
+	name: string;
+	middleware: any[];
+	params: IParam[];
+	fn: any;
+	httpStatus: HttpStatus;
+	headers: OutgoingHttpHeaders;
+}
+export interface IRequest extends IncomingMessage {
+	query: any;
+	body: any;
+	payload: any;
+	params: any;
+	parsed: any;
+	files: any;
+	next: any;
+	route: IRoute;
+	response: IResponse;
+	request: IRequest;
+	context: any;
+}
+export interface IOptions {
+	port: number | string;
+	middleware?: any[];
+	autoload?: string;
+	http2?: http2.SecureServerOptions;
+}
+
+export interface IContext {
+	req: IRequest;
+	res: IResponse;
+	headers?: OutgoingHttpHeaders;
+	status?: HttpStatus;
+	[key: string]: any;
+}
+
+export interface IException {
+	message?: string;
+	error?: any;
+	statusCode?: number;
+}
+
+export type INext = (data?: object) => void;
+
+export enum HttpMethodsEnum {
+	GET = "GET",
+	POST = "POST",
+	PUT = "PUT",
+	DELETE = "DELETE",
+	PATCH = "PATCH",
+	MIXED = "MIXED",
+	HEAD = "HEAD",
+	OPTIONS = "OPTIONS",
+}
+export enum Constants {
+	INVALID_ROUTE = "Invalid route",
+	NO_RESPONSE = "No response",
+	ROUTE_DATA = "__route_data__",
+	ROUTE_MIDDLEWARE = "__route_middleware__",
+	ROUTE_PARAMS = "__route_params__",
+}
+
+export const app: IApp = {
+	headers: {
+		"Content-type": "application/json",
+	},
+	middleware: [],
+	next: false,
+	routes: [],
+};
+
+const decorators: any = {
+	route: [],
+	param: [],
+	middleware: [],
+};
+
+export const bootstrap = (options: IOptions) => {
+	if (options.middleware) {
+		app.middleware = options.middleware;
 	}
 
-	t.is(app.routes.length, 1);
-	const route: IRoute = app.routes[0];
-	t.is(route.name, "getTest");
-	t.is(typeof route.fn, "function");
-	t.is(route.method, HttpMethodsEnum.GET);
-	t.is(route.path, "/test");
-
-	app.routes = [];
-
-});
-
-test("multiple", (t) => {
-	@Resource()
-	class Test {
-		@Get("/test")
-		public getTest() {
-			// test
-		}
-
-		@Post("/test")
-		public postTest() {
-			// test
-		}
-	}
-	t.is(app.routes.length, 2);
-	t.is(app.routes[1].method, HttpMethodsEnum.POST);
-	app.routes = [];
-});
-
-test("laf:json", async (t) => {
-	@Resource("/json")
-	class Test {
-
-		@Get("/")
-		public json(@Context("req") req: IRequest, @Param("number") numb: number) {
-			return {
-				code: 200,
-				message: {
-					data: true,
-				},
-			};
-		}
-	}
-	bootstrap({
-		port: 3000,
-	});
-	const response: any = await supertest(app.server).get("/json").expect(200).expect("Content-Type", /json/);
-
-	t.is(response.body.message.data, true);
-
-});
-
-test("laf:query", async (t) => {
-	@Resource()
-	class Test {
-
-		@Get("/querytest")
-		public querytest(@Query("hello") hello: string, @Query("world") world: string, @Query() query: object) {
-			return {
-				code: 200,
-				message: {
-					hello,
-					query,
-					world,
-				},
-			};
-		}
-	}
-
-	if (!app.server) {
-		bootstrap({
-			port: 3000,
+	if (options.autoload) {
+		fs.readdirSync(options.autoload).map((file: string) => {
+			if (file.endsWith(".js")) {
+				require(options.autoload + "/" + file.replace(/\.[^.$]+$/, ""));
+			}
 		});
 	}
 
-	const response: any = await supertest(app.server).get("/querytest?hello=world&world=hello").expect(200).expect("Content-Type", /json/);
+	app.server = createServer(onRequest).listen(options.port);
+	// http2.createSecureServer(options.http2, onRequest).listen(options.port);
+};
 
-	t.is(response.body.message.hello, "world");
-	t.is(response.body.message.world, "hello");
-	t.is(response.body.message.query.hello, "world");
-	t.is(response.body.message.query.world, "hello");
+/**
+ * Resource decorator
+ * @param path route path
+ */
+export const Resource = (path: string = "") => {
+	return (target: any) => {
+		const resource_before: any[] = [];
+		const resource = decorators.middleware.find((m: any) => m.resource && m.target === target);
 
-});
-
-test("laf:param", async (t) => {
-	@Resource()
-	class Test {
-
-		@Get("/paramtest/:hello")
-		public paramTest(@Param("hello") hello: string, @Param() param: { hello: string }) {
-			return {
-				message: {
-					hello,
-					param,
-				},
-			};
+		if (resource && resource.middleware) {
+			resource_before.push(...resource.middleware); // = middleware.concat(resource.middleware);
 		}
-	}
+		const routes = decorators.route.filter((route: any) => route.target === target);
+		app.routes = app.routes.concat(routes.map((route: any) => {
+			const func = decorators.middleware.find((m: any) => m.descriptor && m.descriptor.value === route.descriptor.value && m.target === route.target);
+			const params = decorators.param.filter((m: any) => route.name === m.name && m.target === route.target);
+			const route_before = [];
+			if (func && func.middleware) {
+				route_before.push(...func.middleware); // = middleware.concat(func.middleware);
+			}
 
-	if (!app.server) {
-		bootstrap({ port: 3000 });
-	}
-
-	const response = await supertest(app.server).get("/paramtest/world").expect(200).expect("Content-Type", /json/);
-
-	t.is(response.status, 200);
-	t.is(response.body.message.hello, "world");
-	t.is(response.body.message.param.hello, "world");
-
-});
-
-test("laf:body", async (t) => {
-	@Resource()
-	class BodyTest {
-
-		@Post("/bodytest")
-		@Use(async (context: IContext) => {
-			return new Promise((resolve, reject) => {
-				let body = "";
-				context.req.on("data", (chunk) => {
-					body += chunk.toString();
-				});
-				context.req.on("end", () => {
-					context.req.body = JSON.parse(body);
-					resolve();
-				});
-			});
-
-		})
-		public bodyTest(@Body("hello") hello: string, @Body() body: { hello: string }) {
 			return {
-				code: 200,
-				message: {
-					body,
-					hello,
-				},
+				target: route.target,
+				fn: route.descriptor.value,
+				path: path + route.path,
+				middleware: resource_before.concat(route_before),
+				params,
+				name: route.name,
+				method: route.method,
 			};
-		}
-	}
+		}));
+	};
+};
 
-	if (!app.server) {
-		bootstrap({ port: 3000 });
-	}
+// Decorators
+export const Before = (...middleware: any[]) => {
+	return (target: any, name?: string, descriptor?: PropertyDescriptor) => {
+		decorators.middleware.push({ middleware, resource: descriptor ? false : true, descriptor, target: descriptor ? target.constructor : target });
+	};
+};
 
-	const response = await supertest(app.server).post("/bodytest").send({ hello: "world" }).expect(200);
-	t.is(response.body.message.hello, "world");
-	t.is(response.body.message.body.hello, "world");
-	t.is(Object.keys(response.body.message.body).length, 1);
-
-});
-
-test("laf:html-with-middleware/param", async (t) => {
-	const getNumber = async (context: IContext) => {
-		context.req.params.number = parseInt(context.req.params.number, 10);
-		context.test = true;
-		return true;
+/**
+ * @Route Decorator
+ * @param method HttpMethodsEnum
+ * @param path Route path
+ */
+export const Route = (method: HttpMethodsEnum, path: string, middleware?: any[]) =>
+	(target: object, name: string, descriptor: PropertyDescriptor) => {
+		decorators.route.push({ method, path, name, middleware, descriptor, target: target.constructor });
 	};
 
-	@Resource("/test")
-	class Test {
+const Params = (fn: any) => (target: object, name: string, index: number) => decorators.param.push({ index, name, fn, target: target.constructor });
 
-		@Get("/html/:number")
-		@Use(getNumber)
-		public async html(@Context() context: IContext, @Param("number") n: number) {
-			t.is(context.req.params.number, n);
-			t.is(context.test, true);
+/**
+ * @Get Decorator
+ * @param path Get path
+ */
+export const Get = (path: string) => Route(HttpMethodsEnum.GET, path);
 
-			context.headers = {
-				"Content-type": "text/html",
-			};
+/**
+ * @Get Decorator
+ * @param path Get path
+ */
+export const Post = (path: string) => Route(HttpMethodsEnum.POST, path);
 
-			context.status = HttpStatus.I_AM_A_TEAPOT;
+/**
+ * @Get Decorator
+ * @param path Get path
+ */
+export const Put = (path: string) => Route(HttpMethodsEnum.PUT, path);
 
-			return "<h1>Hello<h1>";
+/**
+ * @Get Decorator
+ * @param path Get path
+ */
+export const Patch = (path: string) => Route(HttpMethodsEnum.PATCH, path);
+
+/**
+ * @Get Decorator
+ * @param path Get path
+ */
+export const Delete = (path: string) => Route(HttpMethodsEnum.DELETE, path);
+
+/**
+ * @Get Decorator
+ * @param path Get path
+ */
+export const Mixed = (path: string) => Route(HttpMethodsEnum.MIXED, path);
+
+/**
+ * @Get Decorator
+ * @param path Get path
+ */
+export const Head = (path: string) => Route(HttpMethodsEnum.HEAD, path);
+
+/**
+ * @Get Decorator
+ * @param path Get path
+ */
+export const Options = (path: string) => Route(HttpMethodsEnum.OPTIONS, path);
+
+export const Context = (key?: string) => Params((req: IRequest) => !key ? req.context : req.context[key]);
+
+/**
+ * Request handler
+ * @param req Request
+ * @param res Response
+ */
+const onRequest = async (req: IRequest, res: IResponse) => {
+	try {
+		req.params = {};
+		req.parsed = parse(req.url, true);
+		app.next = true;
+		req.route = getRoute(req);
+		req.params = decodeValues(req.params);
+		req.query = decodeValues(req.parsed.query);
+
+		req.context = {
+			status: HttpStatus.OK,
+			headers: app.headers,
+			params: req.params,
+			route: req.route,
+			query: req.query,
+			req,
+			res,
+		};
+
+		if (app.middleware.length > 0) {
+			await execute(app.middleware, req.context);
 		}
 
-	}
+		if (!req.route) {
+			throw new HttpException(Constants.INVALID_ROUTE, HttpStatus.NOT_FOUND);
+		}
+		if (req.route.middleware && app.next) {
+			await execute(req.route.middleware, req.context);
+		}
 
-	if (!app.server) {
-		bootstrap({ port: 3000 });
-	}
+		if (!app.next) {
+			return;
+		}
 
-	try {
-		const response = await supertest(app.server).get("/test/html/10").expect(418).expect("content-type", /html/);
+		req.context.res.body = await req.route.fn(...args(req));
 
-		t.is(response.text, "<h1>Hello<h1>");
+		resolve(req.context);
+
 	} catch (e) {
-		console.error(e);
+		res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, app.headers);
+		res.write(JSON.stringify({
+			message: e.message,
+			statusCode: e.status,
+		}));
+		res.end();
 	}
-});
-*/
+};
+
+/**
+ * Run middleware
+ * @param list
+ * @param context
+ */
+const execute = async (list: any[], context: IContext) => {
+	for (const fn of list) {
+		app.next = false;
+		if (fn instanceof Function) {
+			const result = await fn(context);
+			if (!result) {
+				break;
+			}
+			app.next = true;
+		}
+	}
+};
+
+/**
+ * Find route and match params
+ * @param req Request
+ */
+const getRoute = (req: IRequest) => {
+	return app.routes.find((route) => {
+		const match = /^(.*)\?.*#.*|(.*)(?=[?#])|(.*[^?#])$/.exec(req.url);
+
+		const base = match[1] || match[2] || match[3];
+
+		const keys = [];
+		const regex = /:([^\/?]+)\??/g;
+		route.path = route.path.endsWith("/") && route.path.length > 1 ? route.path.slice(0, -1) : route.path;
+
+		let params = regex.exec(route.path);
+		while (params !== null) {
+			keys.push(params[1]);
+			params = regex.exec(route.path);
+		}
+
+		const path = route.path
+			.replace(/\/:[^\/]+\?/g, "(?:\/([^\/]+))?")
+			.replace(/:[^\/]+/g, "([^\/]+)")
+			.replace("/", "\\/");
+
+		const matches = base.match(new RegExp(`^${path}$`));
+		if (matches && (route.method === req.method
+			|| route.method === HttpMethodsEnum.MIXED)) {
+
+			req.params = Object.assign(req.params, keys.reduce((val: any, key, index) => {
+				val[key] = matches[index + 1];
+				return val;
+			}, {}));
+
+			return true;
+		}
+	});
+};
+
+const args = (req: IRequest) => {
+	const pArgs = [];
+	if (req.route.params) {
+		req.route.params.sort((a, b) => a.index - b.index);
+		for (const param of req.route.params) {
+			let result;
+			if (param !== undefined) {
+				result = param.fn(req);
+			}
+			pArgs.push(result);
+		}
+	}
+	return pArgs;
+};
+
+/**
+ * Decode values
+ * @param obj parameter values
+ */
+const decodeValues = (obj: any) => {
+	const decoded: any = {};
+	for (const key of Object.keys(obj)) {
+		decoded[key] = !isNaN(parseFloat(obj[key])) && isFinite(obj[key]) ?
+			(Number.isInteger(obj[key]) ? Number.parseInt(obj[key], 10) :
+				Number.parseFloat(obj[key])) : obj[key];
+	}
+	return decoded;
+};
+/**
+ * Check if obj is stream
+ * @param obj any
+ */
+const isStream = (obj: any) =>
+	obj &&
+	typeof obj === "object" &&
+	typeof obj.pipe === "function";
+/**
+ * Check if obj is object
+ * @param obj any
+ */
+const isObject = (obj: any) =>
+	obj &&
+	typeof obj === "object" && !Buffer.isBuffer(obj);
+
+/**
+ * Check if obj is readable
+ * @param obj any
+ */
+const isReadable = (obj: any) =>
+	isStream(obj) &&
+	typeof obj._read === "function" &&
+	typeof obj._readableState === "object";
+
+/**
+ * Resolve request
+ * @param context request context
+ */
+const resolve = (context: IContext) => {
+	context.res.writeHead(context.status, Object.assign({}, app.headers, context.headers));
+	if (isReadable(context.res.body)) {
+		return context.res.body.pipe(context.res);
+	}
+
+	if (isObject(context.res.body)) {
+		return context.res.end(JSON.stringify(context.res.body));
+	}
+
+	context.res.end(context.res.body || "");
+};
+
+/**
+ * HttpException error
+ */
+export class HttpException extends Error {
+	constructor(message: string, public status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
+		super(message);
+		this.name = this.constructor.name;
+		Error.captureStackTrace(this, this.constructor);
+		this.status = status;
+	}
+}
