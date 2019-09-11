@@ -1,6 +1,6 @@
 {
 	"name": "@wellenline/via",
-	"version": "1.1.4",
+	"version": "1.1.5",
 	"description": "Lightweight express like web framework",
 	"main": "http.js",
 	"author": "Mihkel Baranov",
@@ -16,6 +16,7 @@
 	"scripts": {
 		"dev": "tsc --watch",
 		"build": "tsc",
+		"release": "standard-version",
 		"test": "ava test/test.js"
 	},
 	"devDependencies": {
