@@ -1,6 +1,10 @@
 # Via
 ![Via](https://raw.githubusercontent.com/Wellenline/via/http2/logo.png)
+
 Simple, lightwieght & dependency free HTTP routing framework
+
+[![Build Status](https://ci.volt.wtf/api/badges/mihkel/via/status.svg)](https://ci.volt.wtf/mihkel/via)
+
 ### Installation
 ```sh
 $ npm add @wellenline/via

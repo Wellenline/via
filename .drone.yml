@@ -2,10 +2,9 @@ kind: pipeline
 name: default
 
 steps:
-
-- name: build
-  image: node:latest
-  commands:
-    - npm install
-    - npm run build
-    - npm test
+  - name: build
+    image: node:latest
+    commands:
+      - npm install
+      - npm run build
+      - npm test

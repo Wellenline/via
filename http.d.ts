@@ -83,7 +83,14 @@ export interface IRequest extends IncomingMessage {
     route: IRoute;
     response: IResponse;
     request: IRequest;
-    context: any;
+    context: {
+        status: HttpStatus;
+        req: IRequest;
+        res: IResponse;
+        headers: any;
+        params: any;
+        [key: string]: any;
+    };
 }
 export interface IOptions {
     port: number | string;
@@ -135,45 +142,14 @@ export declare const Before: (...middleware: any[]) => (target: any, name?: stri
  * @param path Route path
  */
 export declare const Route: (method: HttpMethodsEnum, path: string, middleware?: any[]) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-/**
- * @Get Decorator
- * @param path Get path
- */
+export declare const Params: (fn: any) => (target: object, name: string, index: number) => any;
 export declare const Get: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-/**
- * @Get Decorator
- * @param path Get path
- */
 export declare const Post: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-/**
- * @Get Decorator
- * @param path Get path
- */
 export declare const Put: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-/**
- * @Get Decorator
- * @param path Get path
- */
 export declare const Patch: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-/**
- * @Get Decorator
- * @param path Get path
- */
 export declare const Delete: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-/**
- * @Get Decorator
- * @param path Get path
- */
 export declare const Mixed: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-/**
- * @Get Decorator
- * @param path Get path
- */
 export declare const Head: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
-/**
- * @Get Decorator
- * @param path Get path
- */
 export declare const Options: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 export declare const Context: (key?: string) => (target: object, name: string, index: number) => any;
 /**

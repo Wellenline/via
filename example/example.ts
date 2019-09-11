@@ -1,10 +1,9 @@
 import * as fs from "fs";
-import { app, bootstrap, Delete, Get, HttpException, HttpStatus, IContext, Patch, Post, Put, Resource, Before, IRequest, Context } from "../http";
+import { app, Before, bootstrap, Context, Get, IContext, Resource } from "../http";
 
 let count = 0;
 const middleware_2 = async (context: IContext) => {
-	console.log("Here")
-
+	console.log("Here");
 
 	const time = Date.now();
 	context.middleware_2 = {
@@ -21,7 +20,7 @@ const middleware_2 = async (context: IContext) => {
 };
 
 @Resource()
-@Before(async (ctx: any) => {
+@Before(async () => {
 	console.log("Resource middleware");
 	return true;
 })
@@ -39,7 +38,7 @@ export class Example {
 		};*/
 		return {
 			context: ctx.middleware_2,
-		 	hello: app,
+			hello: app,
 			next: ctx.next,
 			paramss: ctx.params,
 			params,

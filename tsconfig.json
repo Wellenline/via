@@ -1,7 +1,7 @@
 {
 	"compileOnSave": true,
 	"compilerOptions": {
-		"target": "esnext",
+		"target": "es2017",
 		"module": "commonjs",
 		"experimentalDecorators": true,
 		"noImplicitAny": true,
@@ -9,7 +9,7 @@
 		"watch": false
 	},
 	"exclude": [
-		"node_modules",
+		"node_modules"
 		// "example"
 	]
 }

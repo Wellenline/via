@@ -141,48 +141,16 @@ exports.Before = (...middleware) => {
 exports.Route = (method, path, middleware) => (target, name, descriptor) => {
     decorators.route.push({ method, path, name, middleware, descriptor, target: target.constructor });
 };
-const Params = (fn) => (target, name, index) => decorators.param.push({ index, name, fn, target: target.constructor });
-/**
- * @Get Decorator
- * @param path Get path
- */
+exports.Params = (fn) => (target, name, index) => decorators.param.push({ index, name, fn, target: target.constructor });
 exports.Get = (path) => exports.Route(HttpMethodsEnum.GET, path);
-/**
- * @Get Decorator
- * @param path Get path
- */
 exports.Post = (path) => exports.Route(HttpMethodsEnum.POST, path);
-/**
- * @Get Decorator
- * @param path Get path
- */
 exports.Put = (path) => exports.Route(HttpMethodsEnum.PUT, path);
-/**
- * @Get Decorator
- * @param path Get path
- */
 exports.Patch = (path) => exports.Route(HttpMethodsEnum.PATCH, path);
-/**
- * @Get Decorator
- * @param path Get path
- */
 exports.Delete = (path) => exports.Route(HttpMethodsEnum.DELETE, path);
-/**
- * @Get Decorator
- * @param path Get path
- */
 exports.Mixed = (path) => exports.Route(HttpMethodsEnum.MIXED, path);
-/**
- * @Get Decorator
- * @param path Get path
- */
 exports.Head = (path) => exports.Route(HttpMethodsEnum.HEAD, path);
-/**
- * @Get Decorator
- * @param path Get path
- */
 exports.Options = (path) => exports.Route(HttpMethodsEnum.OPTIONS, path);
-exports.Context = (key) => Params((req) => !key ? req.context : req.context[key]);
+exports.Context = (key) => exports.Params((req) => !key ? req.context : req.context[key]);
 /**
  * Request handler
  * @param req Request
@@ -278,18 +246,14 @@ const getRoute = (req) => {
     });
 };
 const args = (req) => {
-    const pArgs = [];
+    const ARGS = [];
     if (req.route.params) {
         req.route.params.sort((a, b) => a.index - b.index);
         for (const param of req.route.params) {
-            let result;
-            if (param !== undefined) {
-                result = param.fn(req);
-            }
-            pArgs.push(result);
+            ARGS.push(param ? param.fn(req) : undefined);
         }
     }
-    return pArgs;
+    return ARGS;
 };
 /**
  * Decode values

@@ -86,7 +86,14 @@ export interface IRequest extends IncomingMessage {
 	route: IRoute;
 	response: IResponse;
 	request: IRequest;
-	context: any;
+	context: {
+		status: HttpStatus,
+		req: IRequest,
+		res: IResponse,
+		headers: any,
+		params: any,
+		[key: string]: any;
+	};
 }
 export interface IOptions {
 	port: number | string;
@@ -212,54 +219,22 @@ export const Route = (method: HttpMethodsEnum, path: string, middleware?: any[])
 		decorators.route.push({ method, path, name, middleware, descriptor, target: target.constructor });
 	};
 
-const Params = (fn: any) => (target: object, name: string, index: number) => decorators.param.push({ index, name, fn, target: target.constructor });
+export const Params = (fn: any) => (target: object, name: string, index: number) => decorators.param.push({ index, name, fn, target: target.constructor });
 
-/**
- * @Get Decorator
- * @param path Get path
- */
 export const Get = (path: string) => Route(HttpMethodsEnum.GET, path);
 
-/**
- * @Get Decorator
- * @param path Get path
- */
 export const Post = (path: string) => Route(HttpMethodsEnum.POST, path);
 
-/**
- * @Get Decorator
- * @param path Get path
- */
 export const Put = (path: string) => Route(HttpMethodsEnum.PUT, path);
 
-/**
- * @Get Decorator
- * @param path Get path
- */
 export const Patch = (path: string) => Route(HttpMethodsEnum.PATCH, path);
 
-/**
- * @Get Decorator
- * @param path Get path
- */
 export const Delete = (path: string) => Route(HttpMethodsEnum.DELETE, path);
 
-/**
- * @Get Decorator
- * @param path Get path
- */
 export const Mixed = (path: string) => Route(HttpMethodsEnum.MIXED, path);
 
-/**
- * @Get Decorator
- * @param path Get path
- */
 export const Head = (path: string) => Route(HttpMethodsEnum.HEAD, path);
 
-/**
- * @Get Decorator
- * @param path Get path
- */
 export const Options = (path: string) => Route(HttpMethodsEnum.OPTIONS, path);
 
 export const Context = (key?: string) => Params((req: IRequest) => !key ? req.context : req.context[key]);
@@ -375,18 +350,14 @@ const getRoute = (req: IRequest) => {
 };
 
 const args = (req: IRequest) => {
-	const pArgs = [];
+	const ARGS = [];
 	if (req.route.params) {
 		req.route.params.sort((a, b) => a.index - b.index);
 		for (const param of req.route.params) {
-			let result;
-			if (param !== undefined) {
-				result = param.fn(req);
-			}
-			pArgs.push(result);
+			ARGS.push(param ? param.fn(req) : undefined);
 		}
 	}
-	return pArgs;
+	return ARGS;
 };
 
 /**
