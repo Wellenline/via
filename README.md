@@ -3,7 +3,7 @@
 
 Simple, lightwieght & dependency free HTTP routing framework
 
-[![Build Status](https://ci.volt.wtf/api/badges/mihkel/via/status.svg)](https://ci.volt.wtf/mihkel/via)
+[![Build Status](https://travis-ci.org/Wellenline/via.svg?branch=master)](https://travis-ci.org/Wellenline/via)
 
 ### Installation
 ```sh
