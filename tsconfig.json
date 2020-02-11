@@ -1,12 +1,12 @@
 {
 	"compileOnSave": true,
 	"compilerOptions": {
-		"target": "es2017",
+		"target": "es2020",
 		"module": "commonjs",
 		"experimentalDecorators": true,
 		"noImplicitAny": true,
 		"declaration": true,
-		"watch": false
+		"watch": false,
 	},
 	"exclude": [
 		"node_modules"

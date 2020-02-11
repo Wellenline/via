@@ -38,7 +38,7 @@ bootstrap({
 ```typescript
 import { bootstrap, Resource, Get, app, IContext } from "@wellenline/via";
 
-@Resource()
+@Resource("/path", { version: "v1" })
 export class Hello {
 	@Get("/hello/:hello")
 	@Before(async (context: IContext) => {

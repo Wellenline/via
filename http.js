@@ -76,6 +76,7 @@ exports.app = {
     middleware: [],
     next: false,
     routes: [],
+    resources: [],
 };
 const decorators = {
     route: [],
@@ -86,7 +87,11 @@ exports.bootstrap = (options) => {
     if (options.middleware) {
         exports.app.middleware = options.middleware;
     }
+    if (options.resources) {
+        exports.app.resources = options.resources;
+    }
     if (options.autoload) {
+        console.warn("[DeprecationWarning]", "Autoload option has been deprecated and will be removed in an upcoming release, please import all your resources into the new options.resources[] array");
         fs.readdirSync(options.autoload).map((file) => {
             if (file.endsWith(".js")) {
                 require(options.autoload + "/" + file.replace(/\.[^.$]+$/, ""));
@@ -100,7 +105,7 @@ exports.bootstrap = (options) => {
  * Resource decorator
  * @param path route path
  */
-exports.Resource = (path = "") => {
+exports.Resource = (path = "", options) => {
     return (target) => {
         const resource_before = [];
         const resource = decorators.middleware.find((m) => m.resource && m.target === target);
@@ -118,7 +123,7 @@ exports.Resource = (path = "") => {
             return {
                 target: route.target,
                 fn: route.descriptor.value,
-                path: path + route.path,
+                path: options && options.version ? "/" + options.version + path + route.path : path + route.path,
                 middleware: resource_before.concat(route_before),
                 params,
                 name: route.name,

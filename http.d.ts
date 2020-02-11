@@ -55,6 +55,7 @@ export interface IApp {
     routes: IRoute[];
     next: boolean;
     middleware: any[];
+    resources: any[];
     headers: OutgoingHttpHeaders;
 }
 export interface IParam {
@@ -96,6 +97,7 @@ export interface IOptions {
     port: number | string;
     middleware?: any[];
     autoload?: string;
+    resources?: any[];
     http2?: http2.SecureServerOptions;
 }
 export interface IContext {
@@ -134,7 +136,9 @@ export declare const bootstrap: (options: IOptions) => void;
  * Resource decorator
  * @param path route path
  */
-export declare const Resource: (path?: string) => (target: any) => void;
+export declare const Resource: (path?: string, options?: {
+    version: string;
+}) => (target: any) => void;
 export declare const Before: (...middleware: any[]) => (target: any, name?: string, descriptor?: PropertyDescriptor) => void;
 /**
  * @Route Decorator

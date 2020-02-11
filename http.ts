@@ -3,6 +3,7 @@ import { createServer, IncomingMessage, OutgoingHttpHeaders, Server, ServerRespo
 
 import * as http2 from "http2";
 import { parse } from "url";
+import { deprecate } from "util";
 
 export enum HttpStatus {
 	CONTINUE = 100,
@@ -58,6 +59,7 @@ export interface IApp {
 	routes: IRoute[];
 	next: boolean;
 	middleware: any[];
+	resources: any[];
 	headers: OutgoingHttpHeaders;
 }
 export interface IParam {
@@ -99,6 +101,7 @@ export interface IOptions {
 	port: number | string;
 	middleware?: any[];
 	autoload?: string;
+	resources?: any[];
 	http2?: http2.SecureServerOptions;
 }
 
@@ -143,6 +146,7 @@ export const app: IApp = {
 	middleware: [],
 	next: false,
 	routes: [],
+	resources: [],
 };
 
 const decorators: any = {
@@ -156,7 +160,12 @@ export const bootstrap = (options: IOptions) => {
 		app.middleware = options.middleware;
 	}
 
+	if (options.resources) {
+		app.resources = options.resources;
+	}
+
 	if (options.autoload) {
+		console.warn("[DeprecationWarning]", "Autoload option has been deprecated and will be removed in an upcoming release, please import all your resources into the new options.resources[] array");
 		fs.readdirSync(options.autoload).map((file: string) => {
 			if (file.endsWith(".js")) {
 				require(options.autoload + "/" + file.replace(/\.[^.$]+$/, ""));
@@ -172,7 +181,7 @@ export const bootstrap = (options: IOptions) => {
  * Resource decorator
  * @param path route path
  */
-export const Resource = (path: string = "") => {
+export const Resource = (path: string = "", options?: { version: string }) => {
 	return (target: any) => {
 		const resource_before: any[] = [];
 		const resource = decorators.middleware.find((m: any) => m.resource && m.target === target);
@@ -192,7 +201,7 @@ export const Resource = (path: string = "") => {
 			return {
 				target: route.target,
 				fn: route.descriptor.value,
-				path: path + route.path,
+				path: options && options.version ? "/" + options.version + path + route.path : path + route.path,
 				middleware: resource_before.concat(route_before),
 				params,
 				name: route.name,
