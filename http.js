@@ -292,7 +292,7 @@ const isObject = (obj) => obj &&
  */
 const isReadable = (obj) => isStream(obj) &&
     typeof obj._read === "function" &&
-    typeof obj._readableState === "object";
+    typeof obj._readableState === "object" || obj.readable;
 /**
  * Resolve request
  * @param context request context

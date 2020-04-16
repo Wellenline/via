@@ -405,7 +405,7 @@ const isObject = (obj: any) =>
 const isReadable = (obj: any) =>
 	isStream(obj) &&
 	typeof obj._read === "function" &&
-	typeof obj._readableState === "object";
+	typeof obj._readableState === "object" || obj.readable;
 
 /**
  * Resolve request
