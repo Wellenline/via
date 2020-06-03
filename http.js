@@ -77,6 +77,7 @@ exports.app = {
     next: false,
     routes: [],
     resources: [],
+    instances: [],
 };
 const decorators = {
     route: [],
@@ -120,9 +121,12 @@ exports.Resource = (path = "", options) => {
             if (func && func.middleware) {
                 route_before.push(...func.middleware); // = middleware.concat(func.middleware);
             }
+            if (!exports.app.instances[route.target]) {
+                exports.app.instances[route.target] = new route.target();
+            }
             return {
                 target: route.target,
-                fn: route.descriptor.value.bind(new route.target()),
+                fn: route.descriptor.value.bind(exports.app.instances[route.target]),
                 path: options && options.version ? "/" + options.version + path + route.path : path + route.path,
                 middleware: resource_before.concat(route_before),
                 params,

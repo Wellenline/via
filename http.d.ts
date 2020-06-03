@@ -56,6 +56,7 @@ export interface IApp {
     next: boolean;
     middleware: any[];
     resources: any[];
+    instances: any[];
     headers: OutgoingHttpHeaders;
 }
 export interface IParam {

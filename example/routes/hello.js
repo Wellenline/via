@@ -11,6 +11,7 @@ const base_1 = require("./base");
 let Hello = class Hello extends base_1.BaseClass {
     constructor() {
         super();
+        console.log("hello");
     }
     async doSome() {
         this.increment();

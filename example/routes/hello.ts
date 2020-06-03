@@ -5,6 +5,7 @@ import { BaseClass } from "./base";
 export class Hello extends BaseClass {
 	constructor() {
 		super();
+		console.log("hello");
 	}
 	@Get("/")
 	public async doSome() {

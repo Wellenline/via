@@ -60,6 +60,7 @@ export interface IApp {
 	next: boolean;
 	middleware: any[];
 	resources: any[];
+	instances: any[];
 	headers: OutgoingHttpHeaders;
 }
 export interface IParam {
@@ -147,6 +148,7 @@ export const app: IApp = {
 	next: false,
 	routes: [],
 	resources: [],
+	instances: [],
 };
 
 const decorators: any = {
@@ -198,9 +200,13 @@ export const Resource = (path: string = "", options?: { version: string }) => {
 				route_before.push(...func.middleware); // = middleware.concat(func.middleware);
 			}
 
+			if (!app.instances[route.target]) {
+				app.instances[route.target] = new route.target();
+			}
+
 			return {
 				target: route.target,
-				fn: route.descriptor.value.bind(new route.target()),
+				fn: route.descriptor.value.bind(app.instances[route.target]),
 				path: options && options.version ? "/" + options.version + path + route.path : path + route.path,
 				middleware: resource_before.concat(route_before),
 				params,
