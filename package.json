@@ -1,6 +1,6 @@
 {
 	"name": "@wellenline/via",
-	"version": "2.0.4",
+	"version": "2.1.0",
 	"description": "Lightweight express like web framework",
 	"main": "http.js",
 	"author": "Mihkel Baranov",

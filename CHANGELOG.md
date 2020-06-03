@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.1.0](https://github.com/wellenline/via/compare/v2.0.4...v2.1.0) (2020-06-03)
+
+
+### Features
+
+* **routing:** ability to extend base resources ([752a61a](https://github.com/wellenline/via/commit/752a61a))
+
 ### [2.0.4](https://github.com/wellenline/via/compare/v2.0.3...v2.0.4) (2020-04-16)
 
 
