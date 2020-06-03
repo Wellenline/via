@@ -7,17 +7,29 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const http_1 = require("../../http");
-let Hello = class Hello {
-    async hello() {
-        return "world";
+const base_1 = require("./base");
+let Hello = class Hello extends base_1.BaseClass {
+    constructor() {
+        super();
+    }
+    async doSome() {
+        this.increment();
+        return {
+            say: this.doSomething(),
+            count: this.counter,
+        };
     }
     async world() {
-        return "hello";
+        console.log(this.counter);
+        return {
+            hello: 1,
+            counter: this.counter,
+        };
     }
 };
 __decorate([
     http_1.Get("/")
-], Hello.prototype, "hello", null);
+], Hello.prototype, "doSome", null);
 __decorate([
     http_1.Get("/world")
 ], Hello.prototype, "world", null);

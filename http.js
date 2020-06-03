@@ -122,7 +122,7 @@ exports.Resource = (path = "", options) => {
             }
             return {
                 target: route.target,
-                fn: route.descriptor.value,
+                fn: route.descriptor.value.bind(new route.target()),
                 path: options && options.version ? "/" + options.version + path + route.path : path + route.path,
                 middleware: resource_before.concat(route_before),
                 params,
