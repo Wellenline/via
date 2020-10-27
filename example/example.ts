@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { app, Before, bootstrap, Context, Get, IContext, Resource } from "../http";
 import { Hello } from "./routes/hello";
+import { Redirect } from "./routes/redirect";
 import { V2 } from "./routes/v2/v2";
 import { World } from "./routes/world";
 /*register: [{
@@ -9,7 +10,7 @@ import { World } from "./routes/world";
 	}],*/
 
 bootstrap({
-	resources: [Hello, World, V2],
+	resources: [Hello, World, V2, Redirect],
 	middleware: [(context: IContext) => {
 		// console.log("Global Middleware", app.routes);
 

@@ -106,6 +106,7 @@ export interface IContext {
     res: IResponse;
     headers?: OutgoingHttpHeaders;
     status?: HttpStatus;
+    redirect?: string;
     [key: string]: any;
 }
 export interface IException {

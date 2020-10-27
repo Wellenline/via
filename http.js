@@ -302,6 +302,11 @@ const isReadable = (obj) => isStream(obj) &&
  * @param context request context
  */
 const resolve = (context) => {
+    console.log(context.redirect);
+    if (context.redirect) {
+        context.res.writeHead(301, { Location: context.redirect });
+        return context.res.end();
+    }
     context.res.writeHead(context.status, Object.assign({}, exports.app.headers, context.headers));
     if (isReadable(context.res.body)) {
         return context.res.body.pipe(context.res);
