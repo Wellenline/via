@@ -419,7 +419,6 @@ const isReadable = (obj: any) =>
  * @param context request context
  */
 const resolve = (context: IContext) => {
-	console.log(context.redirect);
 	if (context.redirect) {
 		context.res.writeHead(301,
 			{ Location: context.redirect },
