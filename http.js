@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = require("fs");
+exports.HttpException = exports.Context = exports.Options = exports.Head = exports.Mixed = exports.Delete = exports.Patch = exports.Put = exports.Post = exports.Get = exports.Params = exports.Route = exports.Before = exports.Resource = exports.bootstrap = exports.app = exports.Constants = exports.HttpMethodsEnum = exports.HttpStatus = void 0;
 const http_1 = require("http");
 const url_1 = require("url");
 var HttpStatus;
@@ -91,16 +91,7 @@ exports.bootstrap = (options) => {
     if (options.resources) {
         exports.app.resources = options.resources;
     }
-    if (options.autoload) {
-        console.warn("[DeprecationWarning]", "Autoload option has been deprecated and will be removed in an upcoming release, please import all your resources into the new options.resources[] array");
-        fs.readdirSync(options.autoload).map((file) => {
-            if (file.endsWith(".js")) {
-                require(options.autoload + "/" + file.replace(/\.[^.$]+$/, ""));
-            }
-        });
-    }
     exports.app.server = http_1.createServer(onRequest).listen(options.port);
-    // http2.createSecureServer(options.http2, onRequest).listen(options.port);
 };
 /**
  * Resource decorator
@@ -303,7 +294,7 @@ const isReadable = (obj) => isStream(obj) &&
  */
 const resolve = (context) => {
     if (context.redirect) {
-        context.res.writeHead(301, { Location: context.redirect });
+        context.res.writeHead(context.status, { Location: context.redirect });
         return context.res.end();
     }
     context.res.writeHead(context.status, Object.assign({}, exports.app.headers, context.headers));

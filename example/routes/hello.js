@@ -6,6 +6,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Hello = void 0;
 const http_1 = require("../../http");
 const base_1 = require("./base");
 let Hello = class Hello extends base_1.BaseClass {

@@ -9,6 +9,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Redirect = void 0;
 const http_1 = require("../../http");
 let Redirect = class Redirect {
     async world(context) {

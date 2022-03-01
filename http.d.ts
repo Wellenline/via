@@ -1,6 +1,5 @@
 /// <reference types="node" />
 import { IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
-import * as http2 from "http2";
 export declare enum HttpStatus {
     CONTINUE = 100,
     SWITCHING_PROTOCOLS = 101,
@@ -99,7 +98,6 @@ export interface IOptions {
     middleware?: any[];
     autoload?: string;
     resources?: any[];
-    http2?: http2.SecureServerOptions;
 }
 export interface IContext {
     req: IRequest;

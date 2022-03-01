@@ -1,9 +1,7 @@
 import * as fs from "fs";
 import { createServer, IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
 
-import * as http2 from "http2";
 import { parse } from "url";
-import { deprecate } from "util";
 
 export enum HttpStatus {
 	CONTINUE = 100,
@@ -103,7 +101,6 @@ export interface IOptions {
 	middleware?: any[];
 	autoload?: string;
 	resources?: any[];
-	http2?: http2.SecureServerOptions;
 }
 
 export interface IContext {
@@ -167,17 +164,7 @@ export const bootstrap = (options: IOptions) => {
 		app.resources = options.resources;
 	}
 
-	if (options.autoload) {
-		console.warn("[DeprecationWarning]", "Autoload option has been deprecated and will be removed in an upcoming release, please import all your resources into the new options.resources[] array");
-		fs.readdirSync(options.autoload).map((file: string) => {
-			if (file.endsWith(".js")) {
-				require(options.autoload + "/" + file.replace(/\.[^.$]+$/, ""));
-			}
-		});
-	}
-
 	app.server = createServer(onRequest).listen(options.port);
-	// http2.createSecureServer(options.http2, onRequest).listen(options.port);
 };
 
 /**
@@ -420,7 +407,7 @@ const isReadable = (obj: any) =>
  */
 const resolve = (context: IContext) => {
 	if (context.redirect) {
-		context.res.writeHead(301,
+		context.res.writeHead(context.status,
 			{ Location: context.redirect },
 		);
 		return context.res.end();
