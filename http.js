@@ -94,6 +94,30 @@ exports.bootstrap = (options) => {
     exports.app.server = http_1.createServer(onRequest).listen(options.port);
 };
 /**
+ * Convert path to regex
+ * @param str string
+ * @returns new RegExp
+ */
+const regexify = (str) => {
+    const parts = str.split("/");
+    parts.shift();
+    const pattern = parts.map((part) => {
+        if (part.startsWith("*")) {
+            return `/(.*)`;
+        }
+        else if (part.startsWith(":")) {
+            if (part.endsWith("?")) {
+                return `(?:/([^/]+?))?`;
+            }
+            return `/([^/]+?)`;
+        }
+        return `/${part}`;
+    });
+    return {
+        pattern: new RegExp(`^${pattern.join("")}/?$`, "i"),
+    };
+};
+/**
  * Resource decorator
  * @param path route path
  */
@@ -230,11 +254,13 @@ const getRoute = (req) => {
             keys.push(params[1]);
             params = regex.exec(route.path);
         }
-        const path = route.path
+        /*const path = route.path
             .replace(/\/:[^\/]+\?/g, "(?:\/([^\/]+))?")
             .replace(/:[^\/]+/g, "([^\/]+)")
-            .replace("/", "\\/");
-        const matches = base.match(new RegExp(`^${path}$`));
+            .replace("/", "\\/");*/
+        const path = route.path.replace(/\/{1,}/g, "/");
+        const { pattern } = regexify(path);
+        const matches = base.match(pattern);
         if (matches && (route.method === req.method
             || route.method === HttpMethodsEnum.MIXED)) {
             req.params = Object.assign(req.params, keys.reduce((val, key, index) => {

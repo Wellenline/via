@@ -44,7 +44,7 @@ test("multiple", (t) => {
 	app.routes = [];
 });
 
-test("laf:json", async (t) => {
+test("Via:json", async (t) => {
 	@Resource("/json")
 	class Test {
 
@@ -67,7 +67,7 @@ test("laf:json", async (t) => {
 
 });
 
-test("laf:query", async (t) => {
+test("Via:query", async (t) => {
 	@Resource()
 	class Test {
 
@@ -99,7 +99,7 @@ test("laf:query", async (t) => {
 
 });
 
-test("laf:param", async (t) => {
+test("Via:param", async (t) => {
 	@Resource()
 	class Test {
 
@@ -126,7 +126,41 @@ test("laf:param", async (t) => {
 
 });
 
-test("laf:html-with-middleware/param", async (t) => {
+test("Via:optionalParams", async (t) => {
+	@Resource()
+	class Test {
+
+		@Get("/paramtest/:first/:second?/:third")
+		public paramTest(@Context() context: IContext) {
+			return {
+				message: {
+					first: context.params.first,
+					second: context.params.second,
+					third: context.params.third,
+				},
+			};
+		}
+	}
+
+	if (!app.server) {
+		bootstrap({ port: 3000 });
+	}
+
+	const response = await supertest(app.server).get("/paramtest/1/2/3").expect(200).expect("Content-Type", /json/);
+	t.is(response.status, 200);
+	t.is(response.body.message.first, 1);
+	t.is(response.body.message.second, 2);
+	t.is(response.body.message.third, 3);
+
+	const response2 = await supertest(app.server).get("/paramtest/1/2").expect(200).expect("Content-Type", /json/);
+	t.is(response2.status, 200);
+	t.is(response2.body.message.first, 1);
+	t.is(response2.body.message.second, undefined);
+	t.is(response2.body.message.third, 2);
+
+});
+
+test("Via:html-with-middleware/param", async (t) => {
 	const getNumber = async (context: IContext) => {
 		context.req.params.number = parseInt(context.req.params.number, 10);
 		context.test = true;
