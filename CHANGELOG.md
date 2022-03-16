@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.5.0](https://github.com/wellenline/via/compare/v2.4.1...v2.5.0) (2022-03-16)
+
+
+### Features
+
+* **router:** added support for optional and wildcard route parameters ([830b78c](https://github.com/wellenline/via/commit/830b78c17984897b54d273dea15e18ee0b302c7e))
+
 ### [2.4.1](https://github.com/wellenline/via/compare/v2.4.0...v2.4.1) (2022-03-16)
 
 ## [2.4.0](https://github.com/wellenline/via/compare/v2.3.3...v2.4.0) (2022-03-01)
