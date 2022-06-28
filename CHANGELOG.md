@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.6.0](https://github.com/wellenline/via/compare/v2.5.0...v2.6.0) (2022-06-28)
+
+
+### Features
+
+* **errors:** define custom headers for httpException ([75f66a3](https://github.com/wellenline/via/commit/75f66a3144f81793256f9fc941ce9cd52e987b39))
+
 ## [2.5.0](https://github.com/wellenline/via/compare/v2.4.1...v2.5.0) (2022-03-16)
 
 
