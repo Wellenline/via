@@ -311,7 +311,7 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 		resolve(req.context);
 
 	} catch (e) {
-		res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, app.headers);
+		res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, { ...app.headers, ...e.headers });
 		res.write(JSON.stringify({
 			message: e.message,
 			statusCode: e.status,
@@ -452,14 +452,21 @@ const resolve = (context: IContext) => {
 	context.res.end(context.res.body || "");
 };
 
+export class CustomErrorHandler extends Error {
+	public headers?: OutgoingHttpHeaders;
+}
 /**
  * HttpException error
  */
-export class HttpException extends Error {
-	constructor(message: string, public status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
+export class HttpException extends CustomErrorHandler {
+	constructor(message: string, public status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR, headers?: OutgoingHttpHeaders) {
 		super(message);
 		this.name = this.constructor.name;
 		Error.captureStackTrace(this, this.constructor);
 		this.status = status;
+
+		if (headers) {
+			this.headers = headers;
+		}
 	}
 }

@@ -156,10 +156,13 @@ export declare const Mixed: (path: string) => (target: object, name: string, des
 export declare const Head: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 export declare const Options: (path: string) => (target: object, name: string, descriptor: PropertyDescriptor) => void;
 export declare const Context: (key?: string) => (target: object, name: string, index: number) => any;
+export declare class CustomErrorHandler extends Error {
+    headers?: OutgoingHttpHeaders;
+}
 /**
  * HttpException error
  */
-export declare class HttpException extends Error {
+export declare class HttpException extends CustomErrorHandler {
     status: HttpStatus;
-    constructor(message: string, status?: HttpStatus);
+    constructor(message: string, status?: HttpStatus, headers?: OutgoingHttpHeaders);
 }

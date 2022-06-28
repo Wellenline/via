@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HttpException = exports.Context = exports.Options = exports.Head = exports.Mixed = exports.Delete = exports.Patch = exports.Put = exports.Post = exports.Get = exports.Params = exports.Route = exports.Before = exports.Resource = exports.bootstrap = exports.app = exports.Constants = exports.HttpMethodsEnum = exports.HttpStatus = void 0;
+exports.HttpException = exports.CustomErrorHandler = exports.Context = exports.Options = exports.Head = exports.Mixed = exports.Delete = exports.Patch = exports.Put = exports.Post = exports.Get = exports.Params = exports.Route = exports.Before = exports.Resource = exports.bootstrap = exports.app = exports.Constants = exports.HttpMethodsEnum = exports.HttpStatus = void 0;
 const http_1 = require("http");
 const url_1 = require("url");
 var HttpStatus;
@@ -213,7 +213,7 @@ const onRequest = async (req, res) => {
         resolve(req.context);
     }
     catch (e) {
-        res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, exports.app.headers);
+        res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, { ...exports.app.headers, ...e.headers });
         res.write(JSON.stringify({
             message: e.message,
             statusCode: e.status,
@@ -332,16 +332,22 @@ const resolve = (context) => {
     }
     context.res.end(context.res.body || "");
 };
+class CustomErrorHandler extends Error {
+}
+exports.CustomErrorHandler = CustomErrorHandler;
 /**
  * HttpException error
  */
-class HttpException extends Error {
-    constructor(message, status = HttpStatus.INTERNAL_SERVER_ERROR) {
+class HttpException extends CustomErrorHandler {
+    constructor(message, status = HttpStatus.INTERNAL_SERVER_ERROR, headers) {
         super(message);
         this.status = status;
         this.name = this.constructor.name;
         Error.captureStackTrace(this, this.constructor);
         this.status = status;
+        if (headers) {
+            this.headers = headers;
+        }
     }
 }
 exports.HttpException = HttpException;
