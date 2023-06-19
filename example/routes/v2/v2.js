@@ -14,9 +14,9 @@ let V2 = class V2 {
     }
 };
 __decorate([
-    http_1.Get("")
+    (0, http_1.Get)("")
 ], V2.prototype, "index", null);
 V2 = __decorate([
-    http_1.Resource("/", { version: "v2" })
+    (0, http_1.Resource)("/", { version: "v2" })
 ], V2);
 exports.V2 = V2;

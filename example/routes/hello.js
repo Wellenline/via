@@ -30,12 +30,12 @@ let Hello = class Hello extends base_1.BaseClass {
     }
 };
 __decorate([
-    http_1.Get("/")
+    (0, http_1.Get)("/")
 ], Hello.prototype, "doSome", null);
 __decorate([
-    http_1.Get("/world")
+    (0, http_1.Get)("/world")
 ], Hello.prototype, "world", null);
 Hello = __decorate([
-    http_1.Resource("/hello", { version: "v1" })
+    (0, http_1.Resource)("/hello", { version: "v1" })
 ], Hello);
 exports.Hello = Hello;

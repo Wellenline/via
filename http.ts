@@ -1,7 +1,4 @@
-import * as fs from "fs";
 import { createServer, IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from "http";
-
-import { parse } from "url";
 
 export enum HttpStatus {
 	CONTINUE = 100,
@@ -55,6 +52,7 @@ export interface IResponse extends ServerResponse {
 export interface IApp {
 	server?: Server;
 	routes: IRoute[];
+	base?: string;
 	next: boolean;
 	middleware: any[];
 	resources: any[];
@@ -81,7 +79,7 @@ export interface IRequest extends IncomingMessage {
 	body: any;
 	payload: any;
 	params: any;
-	parsed: any;
+	parsed: URL;
 	files: any;
 	next: any;
 	route: IRoute;
@@ -99,7 +97,7 @@ export interface IRequest extends IncomingMessage {
 export interface IOptions {
 	port: number | string;
 	middleware?: any[];
-	autoload?: string;
+	base?: string;
 	resources?: any[];
 }
 
@@ -142,6 +140,7 @@ export const app: IApp = {
 	headers: {
 		"Content-type": "application/json",
 	},
+	base: "http://via.local",
 	middleware: [],
 	next: false,
 	routes: [],
@@ -162,6 +161,10 @@ export const bootstrap = (options: IOptions) => {
 
 	if (options.resources) {
 		app.resources = options.resources;
+	}
+
+	if (options.base) {
+		app.base = options.base;
 	}
 
 	app.server = createServer(onRequest).listen(options.port);
@@ -275,12 +278,11 @@ export const Context = (key?: string) => Params((req: IRequest) => !key ? req.co
 const onRequest = async (req: IRequest, res: IResponse) => {
 	try {
 		req.params = {};
-		req.parsed = parse(req.url, true);
+		req.parsed = new URL(req.url, app.base);
 		app.next = true;
 		req.route = getRoute(req);
 		req.params = decodeValues(req.params);
-		req.query = decodeValues(req.parsed.query);
-
+		req.query = decodeValues(Object.fromEntries(req.parsed.searchParams));
 		req.context = {
 			status: HttpStatus.OK,
 			headers: app.headers,
@@ -344,12 +346,10 @@ const execute = async (list: any[], context: IContext) => {
  */
 const getRoute = (req: IRequest) => {
 	return app.routes.find((route) => {
-		const match = /^(.*)\?.*#.*|(.*)(?=[?#])|(.*[^?#])$/.exec(req.url);
-
-		const base = match[1] || match[2] || match[3];
-
+		const { pathname } = new URL(req.url, app.base);
 		const keys = [];
 		const regex = /:([^\/?]+)\??/g;
+
 		route.path = route.path.endsWith("/") && route.path.length > 1 ? route.path.slice(0, -1) : route.path;
 
 		let params = regex.exec(route.path);
@@ -358,15 +358,9 @@ const getRoute = (req: IRequest) => {
 			params = regex.exec(route.path);
 		}
 
-		/*const path = route.path
-			.replace(/\/:[^\/]+\?/g, "(?:\/([^\/]+))?")
-			.replace(/:[^\/]+/g, "([^\/]+)")
-			.replace("/", "\\/");*/
-
 		const path = route.path.replace(/\/{1,}/g, "/");
 		const { pattern } = regexify(path);
-		const matches = base.match(pattern);
-
+		const matches = pathname.match(pattern);
 		if (matches && (route.method === req.method
 			|| route.method === HttpMethodsEnum.MIXED)) {
 
@@ -396,13 +390,37 @@ const args = (req: IRequest) => {
  * @param obj parameter values
  */
 const decodeValues = (obj: any) => {
-	const decoded: any = {};
+	/*const decoded: { [x: string]: number | boolean | string } = {};
 	for (const key of Object.keys(obj)) {
-		decoded[key] = !isNaN(parseFloat(obj[key])) && isFinite(obj[key]) ?
+		decoded[key] = !isNaN(parseFloat(obj[key])) && isFinite(obj[key]) && !(Number.isSafeInteger(obj[key])) ?
 			(Number.isInteger(obj[key]) ? Number.parseInt(obj[key], 10) :
 				Number.parseFloat(obj[key])) : obj[key];
 	}
-	return decoded;
+	return decoded;*/
+	const decodedValues: { [key: string]: number | boolean | string } = {};
+
+	for (const key of Object.keys(obj)) {
+		const value = obj[key];
+
+		// Check if the value is a number
+		const isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
+
+		if (isNumeric) {
+			// Parse the number based on its type
+			if (!Number.isSafeInteger(Number(value))) {
+				decodedValues[key] = value.toString();
+			} else if (Number.isInteger(value)) {
+				decodedValues[key] = Number.parseInt(value, 10);
+			} else {
+				decodedValues[key] = Number.parseFloat(value);
+			}
+		} else {
+			// Keep the original value if it's not a number
+			decodedValues[key] = value;
+		}
+	}
+
+	return decodedValues;
 };
 /**
  * Check if obj is stream

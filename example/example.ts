@@ -2,6 +2,7 @@ import * as fs from "fs";
 import { app, Before, bootstrap, Context, Get, IContext, Resource } from "../http";
 import { Errors } from "./routes/error";
 import { Hello } from "./routes/hello";
+import { Query } from "./routes/query";
 import { Redirect } from "./routes/redirect";
 import { V2 } from "./routes/v2/v2";
 import { World } from "./routes/world";
@@ -11,7 +12,7 @@ import { World } from "./routes/world";
 	}],*/
 
 bootstrap({
-	resources: [Hello, World, V2, Redirect, Errors],
+	resources: [Hello, World, V2, Redirect, Errors, Query],
 	middleware: [(context: IContext) => {
 		// console.log("Global Middleware", app.routes);
 		app.headers = {

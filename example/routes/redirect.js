@@ -17,10 +17,10 @@ let Redirect = class Redirect {
     }
 };
 __decorate([
-    http_1.Get("/"),
-    __param(0, http_1.Context())
+    (0, http_1.Get)("/"),
+    __param(0, (0, http_1.Context)())
 ], Redirect.prototype, "world", null);
 Redirect = __decorate([
-    http_1.Resource("/redirect", { version: "v1" })
+    (0, http_1.Resource)("/redirect", { version: "v1" })
 ], Redirect);
 exports.Redirect = Redirect;

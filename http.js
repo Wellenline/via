@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HttpException = exports.CustomErrorHandler = exports.Context = exports.Options = exports.Head = exports.Mixed = exports.Delete = exports.Patch = exports.Put = exports.Post = exports.Get = exports.Params = exports.Route = exports.Before = exports.Resource = exports.bootstrap = exports.app = exports.Constants = exports.HttpMethodsEnum = exports.HttpStatus = void 0;
 const http_1 = require("http");
-const url_1 = require("url");
 var HttpStatus;
 (function (HttpStatus) {
     HttpStatus[HttpStatus["CONTINUE"] = 100] = "CONTINUE";
@@ -73,6 +72,7 @@ exports.app = {
     headers: {
         "Content-type": "application/json",
     },
+    base: "http://via.local",
     middleware: [],
     next: false,
     routes: [],
@@ -84,15 +84,19 @@ const decorators = {
     param: [],
     middleware: [],
 };
-exports.bootstrap = (options) => {
+const bootstrap = (options) => {
     if (options.middleware) {
         exports.app.middleware = options.middleware;
     }
     if (options.resources) {
         exports.app.resources = options.resources;
     }
-    exports.app.server = http_1.createServer(onRequest).listen(options.port);
+    if (options.base) {
+        exports.app.base = options.base;
+    }
+    exports.app.server = (0, http_1.createServer)(onRequest).listen(options.port);
 };
+exports.bootstrap = bootstrap;
 /**
  * Convert path to regex
  * @param str string
@@ -121,7 +125,7 @@ const regexify = (str) => {
  * Resource decorator
  * @param path route path
  */
-exports.Resource = (path = "", options) => {
+const Resource = (path = "", options) => {
     return (target) => {
         const resource_before = [];
         const resource = decorators.middleware.find((m) => m.resource && m.target === target);
@@ -151,30 +155,43 @@ exports.Resource = (path = "", options) => {
         }));
     };
 };
+exports.Resource = Resource;
 // Decorators
-exports.Before = (...middleware) => {
+const Before = (...middleware) => {
     return (target, name, descriptor) => {
         decorators.middleware.push({ middleware, resource: descriptor ? false : true, descriptor, target: descriptor ? target.constructor : target });
     };
 };
+exports.Before = Before;
 /**
  * @Route Decorator
  * @param method HttpMethodsEnum
  * @param path Route path
  */
-exports.Route = (method, path, middleware) => (target, name, descriptor) => {
+const Route = (method, path, middleware) => (target, name, descriptor) => {
     decorators.route.push({ method, path, name, middleware, descriptor, target: target.constructor });
 };
-exports.Params = (fn) => (target, name, index) => decorators.param.push({ index, name, fn, target: target.constructor });
-exports.Get = (path) => exports.Route(HttpMethodsEnum.GET, path);
-exports.Post = (path) => exports.Route(HttpMethodsEnum.POST, path);
-exports.Put = (path) => exports.Route(HttpMethodsEnum.PUT, path);
-exports.Patch = (path) => exports.Route(HttpMethodsEnum.PATCH, path);
-exports.Delete = (path) => exports.Route(HttpMethodsEnum.DELETE, path);
-exports.Mixed = (path) => exports.Route(HttpMethodsEnum.MIXED, path);
-exports.Head = (path) => exports.Route(HttpMethodsEnum.HEAD, path);
-exports.Options = (path) => exports.Route(HttpMethodsEnum.OPTIONS, path);
-exports.Context = (key) => exports.Params((req) => !key ? req.context : req.context[key]);
+exports.Route = Route;
+const Params = (fn) => (target, name, index) => decorators.param.push({ index, name, fn, target: target.constructor });
+exports.Params = Params;
+const Get = (path) => (0, exports.Route)(HttpMethodsEnum.GET, path);
+exports.Get = Get;
+const Post = (path) => (0, exports.Route)(HttpMethodsEnum.POST, path);
+exports.Post = Post;
+const Put = (path) => (0, exports.Route)(HttpMethodsEnum.PUT, path);
+exports.Put = Put;
+const Patch = (path) => (0, exports.Route)(HttpMethodsEnum.PATCH, path);
+exports.Patch = Patch;
+const Delete = (path) => (0, exports.Route)(HttpMethodsEnum.DELETE, path);
+exports.Delete = Delete;
+const Mixed = (path) => (0, exports.Route)(HttpMethodsEnum.MIXED, path);
+exports.Mixed = Mixed;
+const Head = (path) => (0, exports.Route)(HttpMethodsEnum.HEAD, path);
+exports.Head = Head;
+const Options = (path) => (0, exports.Route)(HttpMethodsEnum.OPTIONS, path);
+exports.Options = Options;
+const Context = (key) => (0, exports.Params)((req) => !key ? req.context : req.context[key]);
+exports.Context = Context;
 /**
  * Request handler
  * @param req Request
@@ -183,11 +200,11 @@ exports.Context = (key) => exports.Params((req) => !key ? req.context : req.cont
 const onRequest = async (req, res) => {
     try {
         req.params = {};
-        req.parsed = url_1.parse(req.url, true);
+        req.parsed = new URL(req.url, exports.app.base);
         exports.app.next = true;
         req.route = getRoute(req);
         req.params = decodeValues(req.params);
-        req.query = decodeValues(req.parsed.query);
+        req.query = decodeValues(Object.fromEntries(req.parsed.searchParams));
         req.context = {
             status: HttpStatus.OK,
             headers: exports.app.headers,
@@ -244,8 +261,7 @@ const execute = async (list, context) => {
  */
 const getRoute = (req) => {
     return exports.app.routes.find((route) => {
-        const match = /^(.*)\?.*#.*|(.*)(?=[?#])|(.*[^?#])$/.exec(req.url);
-        const base = match[1] || match[2] || match[3];
+        const { pathname } = new URL(req.url, exports.app.base);
         const keys = [];
         const regex = /:([^\/?]+)\??/g;
         route.path = route.path.endsWith("/") && route.path.length > 1 ? route.path.slice(0, -1) : route.path;
@@ -254,13 +270,9 @@ const getRoute = (req) => {
             keys.push(params[1]);
             params = regex.exec(route.path);
         }
-        /*const path = route.path
-            .replace(/\/:[^\/]+\?/g, "(?:\/([^\/]+))?")
-            .replace(/:[^\/]+/g, "([^\/]+)")
-            .replace("/", "\\/");*/
         const path = route.path.replace(/\/{1,}/g, "/");
         const { pattern } = regexify(path);
-        const matches = base.match(pattern);
+        const matches = pathname.match(pattern);
         if (matches && (route.method === req.method
             || route.method === HttpMethodsEnum.MIXED)) {
             req.params = Object.assign(req.params, keys.reduce((val, key, index) => {
@@ -286,13 +298,36 @@ const args = (req) => {
  * @param obj parameter values
  */
 const decodeValues = (obj) => {
-    const decoded = {};
+    /*const decoded: { [x: string]: number | boolean | string } = {};
     for (const key of Object.keys(obj)) {
-        decoded[key] = !isNaN(parseFloat(obj[key])) && isFinite(obj[key]) ?
+        decoded[key] = !isNaN(parseFloat(obj[key])) && isFinite(obj[key]) && !(Number.isSafeInteger(obj[key])) ?
             (Number.isInteger(obj[key]) ? Number.parseInt(obj[key], 10) :
                 Number.parseFloat(obj[key])) : obj[key];
     }
-    return decoded;
+    return decoded;*/
+    const decodedValues = {};
+    for (const key of Object.keys(obj)) {
+        const value = obj[key];
+        // Check if the value is a number
+        const isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
+        if (isNumeric) {
+            // Parse the number based on its type
+            if (!Number.isSafeInteger(Number(value))) {
+                decodedValues[key] = value.toString();
+            }
+            else if (Number.isInteger(value)) {
+                decodedValues[key] = Number.parseInt(value, 10);
+            }
+            else {
+                decodedValues[key] = Number.parseFloat(value);
+            }
+        }
+        else {
+            // Keep the original value if it's not a number
+            decodedValues[key] = value;
+        }
+    }
+    return decodedValues;
 };
 /**
  * Check if obj is stream

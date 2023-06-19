@@ -27,18 +27,18 @@ let Errors = class Errors {
     }
 };
 __decorate([
-    http_1.Get("/"),
-    __param(0, http_1.Context())
+    (0, http_1.Get)("/"),
+    __param(0, (0, http_1.Context)())
 ], Errors.prototype, "error", null);
 __decorate([
-    http_1.Get("/headers"),
-    __param(0, http_1.Context())
+    (0, http_1.Get)("/headers"),
+    __param(0, (0, http_1.Context)())
 ], Errors.prototype, "headers", null);
 __decorate([
-    http_1.Get("/header"),
-    __param(0, http_1.Context())
+    (0, http_1.Get)("/header"),
+    __param(0, (0, http_1.Context)())
 ], Errors.prototype, "header", null);
 Errors = __decorate([
-    http_1.Resource("/errors")
+    (0, http_1.Resource)("/errors")
 ], Errors);
 exports.Errors = Errors;

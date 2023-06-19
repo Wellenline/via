@@ -9,36 +9,20 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.World = void 0;
+exports.Query = void 0;
 const http_1 = require("../../http");
-let World = class World {
-    async hello() {
-        return "world";
-    }
-    async wild(context) {
-        return "Im wild";
-    }
-    async parameters(context) {
+let Query = class Query {
+    async index(context) {
         return {
-            param1: context.params.param1,
-            optional: context.params.optional,
-            notoptiona: context.params.notoptional,
+            queryParams: context.query,
         };
     }
 };
 __decorate([
-    (0, http_1.Get)("/")
-], World.prototype, "hello", null);
-__decorate([
-    (0, http_1.Get)("/wild/*"),
+    (0, http_1.Get)("/"),
     __param(0, (0, http_1.Context)())
-], World.prototype, "wild", null);
-__decorate([
-    (0, http_1.Get)("/:param1/:optional?/:notoptional"),
-    __param(0, (0, http_1.Context)())
-], World.prototype, "parameters", null);
-World = __decorate([
-    (0, http_1.Resource)("/world")
-], World);
-exports.World = World;
-//([\/][^/]+)?
+], Query.prototype, "index", null);
+Query = __decorate([
+    (0, http_1.Resource)("/query")
+], Query);
+exports.Query = Query;

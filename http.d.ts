@@ -52,6 +52,7 @@ export interface IResponse extends ServerResponse {
 export interface IApp {
     server?: Server;
     routes: IRoute[];
+    base?: string;
     next: boolean;
     middleware: any[];
     resources: any[];
@@ -78,7 +79,7 @@ export interface IRequest extends IncomingMessage {
     body: any;
     payload: any;
     params: any;
-    parsed: any;
+    parsed: URL;
     files: any;
     next: any;
     route: IRoute;
@@ -96,7 +97,7 @@ export interface IRequest extends IncomingMessage {
 export interface IOptions {
     port: number | string;
     middleware?: any[];
-    autoload?: string;
+    base?: string;
     resources?: any[];
 }
 export interface IContext {

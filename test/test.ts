@@ -119,7 +119,6 @@ test("Via:param", async (t) => {
 	}
 
 	const response = await supertest(app.server).get("/paramtest/world").expect(200).expect("Content-Type", /json/);
-	console.log(response.body);
 	t.is(response.status, 200);
 	t.is(response.body.message.hello, "world");
 	t.is(response.body.message.param.hello, "world");
@@ -130,13 +129,14 @@ test("Via:optionalParams", async (t) => {
 	@Resource()
 	class Test {
 
-		@Get("/paramtest/:first/:second?/:third")
+		@Get("/paramtest/:first/:second?/:third/:fourth?")
 		public paramTest(@Context() context: IContext) {
 			return {
 				message: {
 					first: context.params.first,
 					second: context.params.second,
 					third: context.params.third,
+					fourth: context.params.fourth,
 				},
 			};
 		}
@@ -146,11 +146,13 @@ test("Via:optionalParams", async (t) => {
 		bootstrap({ port: 3000 });
 	}
 
-	const response = await supertest(app.server).get("/paramtest/1/2/3").expect(200).expect("Content-Type", /json/);
+	const response = await supertest(app.server).get("/paramtest/1/2/3/633751515605880026891631").expect(200).expect("Content-Type", /json/);
 	t.is(response.status, 200);
 	t.is(response.body.message.first, 1);
 	t.is(response.body.message.second, 2);
 	t.is(response.body.message.third, 3);
+	t.is(response.body.message.fourth, "633751515605880026891631");
+
 
 	const response2 = await supertest(app.server).get("/paramtest/1/2").expect(200).expect("Content-Type", /json/);
 	t.is(response2.status, 200);
@@ -164,8 +166,6 @@ test("Via:html-with-middleware/param", async (t) => {
 	const getNumber = async (context: IContext) => {
 		context.req.params.number = parseInt(context.req.params.number, 10);
 		context.test = true;
-
-		console.log("In middleware");
 		return true;
 	};
 
