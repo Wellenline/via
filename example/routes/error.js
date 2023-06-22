@@ -25,6 +25,10 @@ let Errors = class Errors {
             "X-Custom-Header": "Custom Value Updated",
         });
     }
+    async unhandled(context) {
+        o.p = 1;
+        return "unhandled";
+    }
 };
 __decorate([
     (0, http_1.Get)("/"),
@@ -38,6 +42,10 @@ __decorate([
     (0, http_1.Get)("/header"),
     __param(0, (0, http_1.Context)())
 ], Errors.prototype, "header", null);
+__decorate([
+    (0, http_1.Get)("/unhandled"),
+    __param(0, (0, http_1.Context)())
+], Errors.prototype, "unhandled", null);
 Errors = __decorate([
     (0, http_1.Resource)("/errors")
 ], Errors);

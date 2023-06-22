@@ -6,7 +6,6 @@
 		"experimentalDecorators": true,
 		"noImplicitAny": true,
 		"declaration": true,
-		"watch": false,
 	},
 	"exclude": [
 		"node_modules",

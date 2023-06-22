@@ -20,6 +20,7 @@ bootstrap({
 		};
 		return true;
 	}],
+	logs: true,
 	port: 3000,
 
 	// tslint:disable-next-line:object-literal-sort-keys

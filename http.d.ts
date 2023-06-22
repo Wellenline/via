@@ -54,6 +54,7 @@ export interface IApp {
     routes: IRoute[];
     base?: string;
     next: boolean;
+    logs?: boolean;
     middleware: any[];
     resources: any[];
     instances: any[];
@@ -98,6 +99,7 @@ export interface IOptions {
     port: number | string;
     middleware?: any[];
     base?: string;
+    logs?: boolean;
     resources?: any[];
 }
 export interface IContext {

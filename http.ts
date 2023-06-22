@@ -54,6 +54,7 @@ export interface IApp {
 	routes: IRoute[];
 	base?: string;
 	next: boolean;
+	logs?: boolean;
 	middleware: any[];
 	resources: any[];
 	instances: any[];
@@ -98,6 +99,7 @@ export interface IOptions {
 	port: number | string;
 	middleware?: any[];
 	base?: string;
+	logs?: boolean;
 	resources?: any[];
 }
 
@@ -143,6 +145,7 @@ export const app: IApp = {
 	base: "http://via.local",
 	middleware: [],
 	next: false,
+	logs: false,
 	routes: [],
 	resources: [],
 	instances: [],
@@ -165,6 +168,10 @@ export const bootstrap = (options: IOptions) => {
 
 	if (options.base) {
 		app.base = options.base;
+	}
+
+	if (options.logs) {
+		app.logs = options.logs;
 	}
 
 	app.server = createServer(onRequest).listen(options.port);
@@ -313,6 +320,9 @@ const onRequest = async (req: IRequest, res: IResponse) => {
 		resolve(req.context);
 
 	} catch (e) {
+		if (app.logs) {
+			console.error(e);
+		}
 		res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, { ...app.headers, ...e.headers });
 		res.write(JSON.stringify({
 			message: e.message,

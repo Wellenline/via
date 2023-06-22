@@ -75,6 +75,7 @@ exports.app = {
     base: "http://via.local",
     middleware: [],
     next: false,
+    logs: false,
     routes: [],
     resources: [],
     instances: [],
@@ -93,6 +94,9 @@ const bootstrap = (options) => {
     }
     if (options.base) {
         exports.app.base = options.base;
+    }
+    if (options.logs) {
+        exports.app.logs = options.logs;
     }
     exports.app.server = (0, http_1.createServer)(onRequest).listen(options.port);
 };
@@ -230,6 +234,9 @@ const onRequest = async (req, res) => {
         resolve(req.context);
     }
     catch (e) {
+        if (exports.app.logs) {
+            console.error(e);
+        }
         res.writeHead(e.status || HttpStatus.INTERNAL_SERVER_ERROR, { ...exports.app.headers, ...e.headers });
         res.write(JSON.stringify({
             message: e.message,
